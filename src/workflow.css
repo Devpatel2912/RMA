@@ -67,12 +67,15 @@
   background-color: white;
   border-radius: 16px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-  overflow: hidden;
+  overflow-x: auto;
   border: 1px solid #f1f5f9;
+  width: 100%;
+  max-width: 100%;
 }
 
 .workflow-table {
   width: 100%;
+  min-width: 800px;
   border-collapse: collapse;
 }
 

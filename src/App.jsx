@@ -15,7 +15,8 @@ import {
   ArrowRightCircle,
   User,
   Building2,
-  LogOut
+  LogOut,
+  Menu
 } from 'lucide-react';
 import './index.css';
 import './modal.css';
@@ -23,9 +24,11 @@ import './workflow.css';
 import './advance-modal.css';
 import './ledgers.css';
 import './login.css';
+import './mobile.css';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [advancingItem, setAdvancingItem] = useState(null);
@@ -205,6 +208,11 @@ function App() {
     document.body.removeChild(link);
   };
 
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setIsMobileMenuOpen(false); // Close drawer on navigation
+  };
+
   const handleLogin = (e) => {
     e.preventDefault();
     // Simulate login
@@ -252,41 +260,55 @@ function App() {
 
   return (
     <div className="layout">
-      {/* Sidebar */}
-      <div className="sidebar">
+      
+      {/* Mobile Header */}
+      <div className="mobile-header">
         <div className="brand">
           <div className="brand-logo">R</div>
-          <div className="brand-text">
-            <span className="brand-title">RMA Flow</span>
-            <span className="brand-subtitle">Professional Edition</span>
-          </div>
+          <span className="brand-title">RMA Flow</span>
+        </div>
+        <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(true)}>
+          <Menu size={24} color="white" />
+        </button>
+      </div>
+
+      {/* Mobile Drawer Overlay */}
+      {isMobileMenuOpen && (
+        <div className="mobile-overlay" onClick={() => setIsMobileMenuOpen(false)}></div>
+      )}
+
+      {/* Sidebar */}
+      <div className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+        <div className="brand">
+          <div className="brand-logo">R</div>
+          <span className="brand-title">RMA Flow</span>
         </div>
 
         <div className="nav-menu">
           <div 
             className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => handleTabChange('dashboard')}
           >
             <LayoutDashboard size={20} />
             <span>Dashboard</span>
           </div>
           <div 
             className={`nav-item ${activeTab === 'workflow' ? 'active' : ''}`}
-            onClick={() => setActiveTab('workflow')}
+            onClick={() => handleTabChange('workflow')}
           >
             <Workflow size={20} />
             <span>Workflow</span>
           </div>
           <div 
             className={`nav-item ${activeTab === 'ledgers' ? 'active' : ''}`}
-            onClick={() => setActiveTab('ledgers')}
+            onClick={() => handleTabChange('ledgers')}
           >
             <BookOpen size={20} />
             <span>Ledgers</span>
           </div>
         </div>
 
-        <button className="new-inward-btn" onClick={() => setIsModalOpen(true)}>
+        <button className="new-inward-btn" onClick={() => { setIsModalOpen(true); setIsMobileMenuOpen(false); }}>
           <Plus size={20} />
           <span>New Inward</span>
         </button>
@@ -300,7 +322,7 @@ function App() {
       </div>
 
       {/* Main Content Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="main-container">
         
         {/* Main Content Scrollable Area */}
         <div className="main-content">
@@ -401,9 +423,6 @@ function App() {
               <div className="workflow-header">
                 <div className="header-text">
                   <h1 className="page-title">Replacement Workflow</h1>
-                  <p className="page-subtitle">
-                    Double-click the <ArrowRightCircle size={14} style={{ display: 'inline', verticalAlign: 'middle', color: 'var(--primary-blue)' }} /> icon to advance status.
-                  </p>
                 </div>
                 
                 <div className="workflow-controls">
