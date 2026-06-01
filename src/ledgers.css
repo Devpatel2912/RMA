@@ -1,0 +1,137 @@
+/* Ledgers View Styles */
+
+.ledgers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-top: 16px;
+}
+
+.ledger-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ledger-column-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.customer-card, .vendor-card {
+  background-color: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  border: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.card-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.card-tag {
+  background-color: #f1f5f9;
+  color: #64748b;
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.customer-dates-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.date-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.date-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-blue);
+}
+
+.date-value.pending {
+  color: #10b981;
+}
+
+.progress-track {
+  display: flex;
+  gap: 4px;
+  height: 4px;
+  width: 100%;
+}
+
+.progress-segment {
+  flex: 1;
+  background-color: #f1f5f9;
+  border-radius: 2px;
+}
+
+.progress-segment.active {
+  background-color: var(--primary-blue);
+}
+
+.vendor-details-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vendor-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.vendor-detail-label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.vendor-detail-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.vendor-detail-value.in-progress {
+  color: #a855f7;
+}
+
+.vendor-detail-value.serial {
+  color: #ec4899;
+  font-family: monospace;
+}

@@ -1,0 +1,75 @@
+/* Adding to the end of modal.css for advance workflow modal */
+
+.advance-modal {
+  max-width: 400px;
+}
+
+.advance-modal-header {
+  padding: 24px;
+}
+
+.advance-modal-body {
+  padding: 0 24px 24px 24px;
+}
+
+.current-state-box {
+  background-color: #f8fafc;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.current-state-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.current-state-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.advance-modal-footer {
+  padding: 16px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  align-items: center;
+}
+
+.btn-text-cancel {
+  background: none;
+  border: none;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px;
+  transition: color 0.2s;
+}
+
+.btn-text-cancel:hover {
+  color: #0f172a;
+}
+
+.btn-confirm {
+  background-color: var(--primary-blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-confirm:hover {
+  background-color: var(--primary-blue-hover);
+}

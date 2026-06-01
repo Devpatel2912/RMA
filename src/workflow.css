@@ -1,0 +1,150 @@
+/* Workflow View Styles */
+
+.workflow-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+}
+
+.workflow-controls {
+  display: flex;
+  gap: 16px;
+  background-color: white;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.filter-dropdown {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  background-color: #f1f5f9;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  min-width: 160px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.filter-dropdown:hover {
+  background-color: #e2e8f0;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  padding: 0 12px;
+  gap: 8px;
+  width: 250px;
+}
+
+.search-input {
+  border: none;
+  background: transparent;
+  padding: 8px 0;
+  font-size: 13px;
+  color: #0f172a;
+  width: 100%;
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: #94a3b8;
+}
+
+.workflow-table-container {
+  background-color: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+  border: 1px solid #f1f5f9;
+}
+
+.workflow-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.workflow-th {
+  padding: 16px 24px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.workflow-tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.2s;
+}
+
+.workflow-tr:last-child {
+  border-bottom: none;
+}
+
+.workflow-tr:hover {
+  background-color: #f8fafc;
+}
+
+.workflow-td {
+  padding: 16px 24px;
+  vertical-align: middle;
+}
+
+.ticket-id {
+  font-family: monospace;
+  color: var(--primary-blue);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.table-cell-main {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.table-cell-sub {
+  font-size: 12px;
+  color: #64748b;
+  display: block;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  color: var(--primary-blue);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background-color: var(--bg-badge-received);
+}
+
+.table-serial {
+  font-family: monospace;
+  font-size: 12px;
+  color: #475569;
+}
