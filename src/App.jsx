@@ -1,19 +1,11 @@
-import React, { useState } from 'react';
-import { 
-  LayoutDashboard, 
-  Workflow, 
-  BookOpen, 
-  Plus, 
-  Download, 
-  ClipboardList,
-  Truck,
+import React, { useState, useEffect, useRef } from 'react';
+import jsPDF from 'jspdf';
+import {
+  LayoutDashboard,
+  Workflow,
+  BookOpen,
   Package,
-  UserCheck,
-  History,
-  X,
-  Search,
-  ArrowRightCircle,
-  User,
+  Plus,
   Building2,
   LogOut,
   Menu
@@ -26,24 +18,63 @@ import './ledgers.css';
 import './login.css';
 import './mobile.css';
 
+import DashboardTab from './components/DashboardTab';
+import WorkflowTab from './components/WorkflowTab';
+import LedgersTab from './components/LedgersTab';
+import ManageCategoriesTab from './components/ManageCategoriesTab';
+import ManageVendorsTab from './components/ManageVendorsTab';
+import NewInwardModal from './components/NewInwardModal';
+import AdvanceWorkflowModal from './components/AdvanceWorkflowModal';
+import TicketDetailsModal from './components/TicketDetailsModal';
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newVendorName, setNewVendorName] = useState('');
   const [advancingItem, setAdvancingItem] = useState(null);
+  const [viewingItem, setViewingItem] = useState(null);
+  const [shippingImagePreview, setShippingImagePreview] = useState(null);
+  const [advanceDate, setAdvanceDate] = useState('');
+  const [newSerialNumber, setNewSerialNumber] = useState('');
+  const [courierCharge, setCourierCharge] = useState('');
   const [workflowFilter, setWorkflowFilter] = useState('All Items');
   const [searchQuery, setSearchQuery] = useState('');
-  
+
+  const [categories, setCategories] = useState([
+    'Motherboard',
+    'GPU',
+    'CPU',
+    'PSU',
+    'Storage'
+  ]);
+
+  const [vendors, setVendors] = useState([
+    'ASUS Service',
+    'Gigabyte Care',
+    'MSI Support',
+    'Samsung',
+    'Corsair'
+  ]);
+
+  const getTodayDate = () => new Date().toISOString().split('T')[0];
+
   // Form State
   const [formData, setFormData] = useState({
     customerName: '',
     contactNumber: '',
+    email: '',
     productName: '',
     category: 'Motherboard',
     serviceVendor: 'ASUS Service',
     serialNumber: '',
-    description: ''
+    description: '',
+    image: null,
+    inwardDate: getTodayDate()
   });
 
   const [recentActivities, setRecentActivities] = useState([
@@ -101,6 +132,38 @@ function App() {
     }
   ]);
 
+  // Barcode Scanner Global Listener
+  useEffect(() => {
+    let barcode = '';
+    let lastKeyTime = Date.now();
+
+    const handleKeyDown = (e) => {
+      const currentTime = Date.now();
+      
+      // If time between keystrokes is more than 50ms, consider it manual typing and reset
+      if (currentTime - lastKeyTime > 50) {
+        barcode = '';
+      }
+
+      // If Enter is pressed and we have a captured barcode string
+      if (e.key === 'Enter' && barcode.length > 3) {
+        if (isModalOpen) {
+          setFormData(prev => ({ ...prev, serialNumber: barcode }));
+        } else if (advancingItem && advancingItem.status === 'VENDOR INWARD') {
+          setNewSerialNumber(barcode);
+        }
+        barcode = '';
+      } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        barcode += e.key;
+      }
+      
+      lastKeyTime = currentTime;
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isModalOpen, advancingItem]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -110,43 +173,180 @@ function App() {
   };
 
   const handleSaveInward = () => {
-    if (!formData.customerName || !formData.productName) return;
+    if (!formData.customerName || !formData.contactNumber || !formData.productName || !formData.category || !formData.serviceVendor || !formData.serialNumber || !formData.description || !formData.inwardDate) {
+      alert("Please fill out all required fields. Email and Image are optional.");
+      return;
+    }
 
     const newId = Math.floor(Math.random() * 100).toString();
     const newRma = `RMA-${Math.floor(100000 + Math.random() * 900000)}`;
-    const today = new Date();
-    const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
 
-    const newActivity = {
-      id: newId,
-      name: formData.customerName,
-      contactNumber: formData.contactNumber || 'N/A',
-      product: formData.productName,
-      category: formData.category,
-      serviceVendor: formData.serviceVendor,
-      serialNumber: formData.serialNumber || 'N/A',
-      rma: newRma,
-      status: "CUSTOMER INWARD",
-      date: dateStr,
-      statusClass: "bg-blue-light"
+    let dateStr = "";
+    if (formData.inwardDate) {
+      const [year, month, day] = formData.inwardDate.split('-');
+      dateStr = `${day}/${month}/${year}`;
+    } else {
+      const today = new Date();
+      dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+    }
+
+    const finalizeSave = (imgData = null) => {
+      const newActivity = {
+        id: newId,
+        name: formData.customerName,
+        contactNumber: formData.contactNumber || 'N/A',
+        product: formData.productName,
+        category: formData.category,
+        serviceVendor: formData.serviceVendor,
+        serialNumber: formData.serialNumber || 'N/A',
+        email: formData.email,
+        rma: newRma,
+        status: "CUSTOMER INWARD",
+        date: dateStr,
+        statusClass: "bg-blue-light",
+        inwardImageURL: imgData
+      };
+
+      // Format WhatsApp Message
+      let whatsappMessage = `*New RMA Inward Entry*\n\n`;
+      whatsappMessage += `*Ticket #:* ${newRma}\n`;
+      whatsappMessage += `*Customer Name:* ${formData.customerName}\n`;
+      whatsappMessage += `*Contact:* ${formData.contactNumber}\n`;
+      if (formData.email) whatsappMessage += `*Email:* ${formData.email}\n`;
+      whatsappMessage += `*Product:* ${formData.productName}\n`;
+      whatsappMessage += `*Category:* ${formData.category}\n`;
+      whatsappMessage += `*Vendor:* ${formData.serviceVendor}\n`;
+      if (formData.serialNumber) whatsappMessage += `*Serial #:* ${formData.serialNumber}\n`;
+      if (formData.description) whatsappMessage += `*Description:* ${formData.description}\n`;
+      whatsappMessage += `*Date:* ${dateStr}\n`;
+      if (formData.image) whatsappMessage += `\n*Note:* Please manually attach the downloaded PDF.`;
+
+      const triggerWhatsApp = () => {
+        const phoneNum = formData.contactNumber.replace(/[\s\-\(\)\+]/g, '');
+        if (phoneNum) {
+          window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
+        }
+      };
+
+      const doc = new jsPDF();
+      
+      // Header background
+      doc.setFillColor(15, 23, 42); // #0f172a
+      doc.rect(0, 0, 210, 40, 'F');
+      
+      // Header text
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(28);
+      doc.setFont("helvetica", "bold");
+      doc.text("RMA Flow", 20, 22);
+      
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text("CUSTOMER INWARD TICKET", 20, 32);
+
+      doc.setFont("helvetica", "bold");
+      doc.text(`TICKET #: ${newRma}`, 140, 27);
+      
+      let yPos = 60;
+      
+      const drawField = (label, value, x, y) => {
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(100, 116, 139); // slate-500
+        doc.text(label.toUpperCase(), x, y);
+        
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(15, 23, 42); // slate-900
+        const textVal = value ? value.toString() : "N/A";
+        const splitVal = doc.splitTextToSize(textVal, 80);
+        doc.text(splitVal, x, y + 6);
+        return splitVal.length * 6;
+      };
+      
+      drawField("Customer Name", formData.customerName, 20, yPos);
+      drawField("Contact Number", formData.contactNumber, 110, yPos);
+      yPos += 20;
+
+      drawField("Email Address", formData.email, 20, yPos);
+      drawField("Inward Date", dateStr, 110, yPos);
+      yPos += 20;
+
+      doc.setDrawColor(226, 232, 240); // slate-200
+      doc.line(20, yPos, 190, yPos);
+      yPos += 15;
+
+      drawField("Product Model", formData.productName, 20, yPos);
+      drawField("Category", formData.category, 110, yPos);
+      yPos += 20;
+
+      drawField("Service Vendor", formData.serviceVendor, 20, yPos);
+      drawField("Serial Number", formData.serialNumber, 110, yPos);
+      yPos += 20;
+      
+      if (formData.description) {
+        doc.line(20, yPos, 190, yPos);
+        yPos += 15;
+        
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(100, 116, 139);
+        doc.text("PROBLEM DESCRIPTION", 20, yPos);
+        
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(15, 23, 42);
+        const splitDesc = doc.splitTextToSize(formData.description, 170);
+        doc.text(splitDesc, 20, yPos + 6);
+        yPos += (splitDesc.length * 6) + 15;
+      }
+
+      if (imgData) {
+        try {
+          doc.setFontSize(10);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(100, 116, 139);
+          doc.text("ATTACHED IMAGE", 20, yPos);
+          yPos += 5;
+          doc.addImage(imgData, 'JPEG', 20, yPos, 100, 100, undefined, 'FAST');
+        } catch(e) {
+          console.error("Failed to add image to PDF", e);
+        }
+      }
+      
+      doc.save(`${newRma}_Inward_Ticket.pdf`);
+      triggerWhatsApp();
+
+      setRecentActivities(prev => [newActivity, ...prev]);
+      setIsModalOpen(false);
+      setFormData({
+        customerName: '',
+        contactNumber: '',
+        email: '',
+        productName: '',
+        category: 'Motherboard',
+        serviceVendor: 'ASUS Service',
+        serialNumber: '',
+        description: '',
+        image: null,
+        inwardDate: getTodayDate()
+      });
     };
 
-    setRecentActivities([newActivity, ...recentActivities]);
-    setIsModalOpen(false);
-    setFormData({
-      customerName: '',
-      contactNumber: '',
-      productName: '',
-      category: 'Motherboard',
-      serviceVendor: 'ASUS Service',
-      serialNumber: '',
-      description: ''
-    });
+    if (formData.image) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        finalizeSave(event.target.result);
+      };
+      reader.readAsDataURL(formData.image);
+    } else {
+      finalizeSave(null);
+    }
   };
 
   const confirmAdvanceStatus = () => {
     if (!advancingItem) return;
-    
+
     setRecentActivities(activities => activities.map(act => {
       if (act.id === advancingItem.id) {
         let newStatus, newClass;
@@ -166,12 +366,133 @@ function App() {
           default:
             return act;
         }
-        return { ...act, status: newStatus, statusClass: newClass };
+        let formattedDate = act.date;
+        if (advanceDate) {
+          const [year, month, day] = advanceDate.split('-');
+          formattedDate = `${day}/${month}/${year}`;
+        }
+        let updatedItem = { ...act, status: newStatus, statusClass: newClass, date: formattedDate };
+        if (newSerialNumber) {
+          updatedItem.oldSerialNumber = act.serialNumber;
+          updatedItem.serialNumber = newSerialNumber;
+        }
+        if (courierCharge) {
+          updatedItem.courierCharge = courierCharge;
+        }
+        return updatedItem;
       }
       return act;
     }));
-    
+
     setAdvancingItem(null);
+    setShippingImagePreview(null);
+  };
+
+  const handleGenerateReport = (item) => {
+    // Format WhatsApp Message
+    let whatsappMessage = `*RMA Final Report*\n\n`;
+    whatsappMessage += `*Ticket #:* ${item.rma}\n`;
+    whatsappMessage += `*Customer Name:* ${item.name}\n`;
+    whatsappMessage += `*Contact:* ${item.contactNumber}\n`;
+    if (item.email) whatsappMessage += `*Email:* ${item.email}\n`;
+    whatsappMessage += `*Product:* ${item.product}\n`;
+    whatsappMessage += `*Category:* ${item.category}\n`;
+    whatsappMessage += `*Vendor:* ${item.serviceVendor}\n`;
+    whatsappMessage += `*Final Serial #:* ${item.serialNumber}\n`;
+    if (item.oldSerialNumber) whatsappMessage += `*Old Serial #:* ${item.oldSerialNumber}\n`;
+    if (item.courierCharge) whatsappMessage += `*Courier Charge:* ${item.courierCharge}\n`;
+    whatsappMessage += `*Completion Date:* ${item.date}\n`;
+    whatsappMessage += `\n*Note:* Please manually attach the downloaded PDF report.`;
+
+    const phoneNum = item.contactNumber.replace(/[\s\-\(\)\+]/g, '');
+    if (phoneNum) {
+      window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
+    }
+
+    const doc = new jsPDF();
+    
+    // Header background
+    doc.setFillColor(15, 23, 42); // #0f172a
+    doc.rect(0, 0, 210, 40, 'F');
+    
+    // Header text
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(28);
+    doc.setFont("helvetica", "bold");
+    doc.text("RMA Flow", 20, 22);
+    
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text("FINAL RESOLUTION TICKET", 20, 32);
+
+    doc.setFont("helvetica", "bold");
+    doc.text(`TICKET #: ${item.rma}`, 140, 27);
+    
+    let yPos = 60;
+    
+    const drawField = (label, value, x, y) => {
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(100, 116, 139); // slate-500
+      doc.text(label.toUpperCase(), x, y);
+      
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(15, 23, 42); // slate-900
+      const textVal = value ? value.toString() : "N/A";
+      const splitVal = doc.splitTextToSize(textVal, 80);
+      doc.text(splitVal, x, y + 6);
+      return splitVal.length * 6;
+    };
+
+    drawField("Customer Name", item.name, 20, yPos);
+    drawField("Contact Number", item.contactNumber, 110, yPos);
+    yPos += 20;
+    
+    drawField("Email Address", item.email, 20, yPos);
+    drawField("Completion Date", item.date, 110, yPos);
+    yPos += 20;
+    
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.line(20, yPos, 190, yPos);
+    yPos += 15;
+
+    drawField("Product Model", item.product, 20, yPos);
+    drawField("Category", item.category, 110, yPos);
+    yPos += 20;
+
+    drawField("Service Vendor", item.serviceVendor, 20, yPos);
+    drawField("Courier Charge", item.courierCharge, 110, yPos);
+    yPos += 20;
+
+    doc.line(20, yPos, 190, yPos);
+    yPos += 15;
+    
+    drawField("Original Serial #", item.oldSerialNumber || item.serialNumber, 20, yPos);
+    drawField("New Replacement Serial #", item.serialNumber, 110, yPos);
+    yPos += 30;
+
+    if (item.inwardImageURL) {
+      try {
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(100, 116, 139);
+        doc.text("INWARD IMAGE", 20, yPos);
+        yPos += 5;
+        doc.addImage(item.inwardImageURL, 'JPEG', 20, yPos, 100, 100, undefined, 'FAST');
+      } catch(e) {
+        console.error("Failed to add image to PDF", e);
+      }
+    }
+    
+    doc.save(`${item.rma}_Final_Report.pdf`);
+
+    setRecentActivities(activities => activities.map(act => {
+      if (act.id === item.id) {
+        return { ...act, status: 'COMPLETED' };
+      }
+      return act;
+    }));
   };
 
   const handleExportData = () => {
@@ -199,7 +520,7 @@ function App() {
     const csvContent = csvRows.join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    
+
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', `rma_export_${new Date().getTime()}.csv`);
@@ -231,18 +552,18 @@ function App() {
               <p className="login-subtitle">Sign in to your RMA Flow account</p>
             </div>
           </div>
-          
+
           <form className="login-form" onSubmit={handleLogin}>
             <div className="login-input-group">
               <label>Email Address</label>
               <input type="email" className="login-input" placeholder="admin@rmaflow.com" required defaultValue="admin@rmaflow.com" />
             </div>
-            
+
             <div className="login-input-group">
               <label>Password</label>
               <input type="password" className="login-input" placeholder="••••••••" required defaultValue="password" />
             </div>
-            
+
             <button type="submit" className="login-btn">Sign In</button>
           </form>
         </div>
@@ -252,15 +573,15 @@ function App() {
 
   const filteredWorkflowItems = recentActivities.filter(item => {
     const matchesFilter = workflowFilter === 'All Items' || item.status === workflowFilter.toUpperCase();
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          item.rma.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          item.serialNumber.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.rma.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.serialNumber.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
   return (
     <div className="layout">
-      
+
       {/* Mobile Header */}
       <div className="mobile-header">
         <div className="brand">
@@ -285,26 +606,40 @@ function App() {
         </div>
 
         <div className="nav-menu">
-          <div 
+          <div
             className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
             onClick={() => handleTabChange('dashboard')}
           >
             <LayoutDashboard size={20} />
             <span>Dashboard</span>
           </div>
-          <div 
+          <div
             className={`nav-item ${activeTab === 'workflow' ? 'active' : ''}`}
             onClick={() => handleTabChange('workflow')}
           >
             <Workflow size={20} />
             <span>Workflow</span>
           </div>
-          <div 
+          <div
             className={`nav-item ${activeTab === 'ledgers' ? 'active' : ''}`}
             onClick={() => handleTabChange('ledgers')}
           >
             <BookOpen size={20} />
             <span>Ledgers</span>
+          </div>
+          <div
+            className={`nav-item ${activeTab === 'categories' ? 'active' : ''}`}
+            onClick={() => handleTabChange('categories')}
+          >
+            <Package size={20} />
+            <span>Categories</span>
+          </div>
+          <div
+            className={`nav-item ${activeTab === 'vendors' ? 'active' : ''}`}
+            onClick={() => handleTabChange('vendors')}
+          >
+            <Building2 size={20} />
+            <span>Vendors</span>
           </div>
         </div>
 
@@ -323,275 +658,58 @@ function App() {
 
       {/* Main Content Area */}
       <div className="main-container">
-        
+
         {/* Main Content Scrollable Area */}
         <div className="main-content">
-          
           {activeTab === 'dashboard' && (
-            <>
-              <div className="header">
-                <div className="header-text">
-                  <h1 className="page-title">Operational Overview</h1>
-                  <p className="page-subtitle">Real-time metrics of your replacement cycle.</p>
-                </div>
-                <button className="export-btn" onClick={handleExportData}>
-                  <Download size={16} />
-                  Export Data
-                </button>
-              </div>
-
-              <div className="stats-grid">
-                <div className="stat-card">
-                  <div className="stat-info">
-                    <span className="stat-label">Received</span>
-                    <span className="stat-value">{recentActivities.filter(a => a.status === 'CUSTOMER INWARD').length}</span>
-                    <div className="stat-indicator" style={{ backgroundColor: 'var(--color-received)' }}></div>
-                  </div>
-                  <div className="stat-icon" style={{ color: 'var(--color-received)' }}>
-                    <ClipboardList size={48} />
-                  </div>
-                </div>
-
-                <div className="stat-card">
-                  <div className="stat-info">
-                    <span className="stat-label">Wait Vendor Out</span>
-                    <span className="stat-value">{recentActivities.filter(a => a.status === 'VENDOR OUTWARD').length}</span>
-                    <div className="stat-indicator" style={{ backgroundColor: 'var(--color-vendor-out)' }}></div>
-                  </div>
-                  <div className="stat-icon" style={{ color: 'var(--color-vendor-out)' }}>
-                    <Truck size={48} />
-                  </div>
-                </div>
-
-                <div className="stat-card">
-                  <div className="stat-info">
-                    <span className="stat-label">At Vendor</span>
-                    <span className="stat-value">{recentActivities.filter(a => a.status === 'VENDOR INWARD').length}</span>
-                    <div className="stat-indicator" style={{ backgroundColor: 'var(--color-vendor-in)' }}></div>
-                  </div>
-                  <div className="stat-icon" style={{ color: 'var(--color-vendor-in)' }}>
-                    <Package size={48} />
-                  </div>
-                </div>
-
-                <div className="stat-card">
-                  <div className="stat-info">
-                    <span className="stat-label">Ready For Customer</span>
-                    <span className="stat-value">{recentActivities.filter(a => a.status === 'CUSTOMER OUTWARD').length}</span>
-                    <div className="stat-indicator" style={{ backgroundColor: 'var(--color-customer-out)' }}></div>
-                  </div>
-                  <div className="stat-icon" style={{ color: 'var(--color-customer-out)' }}>
-                    <UserCheck size={48} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="activity-section">
-                <div className="section-header">
-                  <History size={18} color="var(--primary-blue)" />
-                  <span>Recent Activity</span>
-                </div>
-
-                <div className="activity-list">
-                  {recentActivities.map((activity, index) => (
-                    <div className="activity-item" key={index}>
-                      <div className={`activity-id-box ${activity.statusClass}`} style={{ backgroundColor: 'transparent' }}>
-                        <div style={{ backgroundColor: 'currentColor', opacity: 0.1, position: 'absolute', inset: 0, borderRadius: '8px' }}></div>
-                        <span style={{ position: 'relative', zIndex: 1, color: 'inherit' }}>{activity.id}</span>
-                      </div>
-                      
-                      <div className="activity-details">
-                        <span className="activity-name">{activity.name}</span>
-                        <span className="activity-product">{activity.product} • {activity.rma}</span>
-                      </div>
-
-                      <div className="activity-meta">
-                        <span className={`status-badge ${activity.statusClass}`}>
-                          {activity.status}
-                        </span>
-                        <span className="activity-date">{activity.date}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
+            <DashboardTab 
+              recentActivities={recentActivities} 
+              handleExportData={handleExportData} 
+              setViewingItem={setViewingItem} 
+            />
           )}
 
           {activeTab === 'workflow' && (
-            <>
-              <div className="workflow-header">
-                <div className="header-text">
-                  <h1 className="page-title">Replacement Workflow</h1>
-                </div>
-                
-                <div className="workflow-controls">
-                  <select 
-                    className="filter-dropdown"
-                    value={workflowFilter}
-                    onChange={(e) => setWorkflowFilter(e.target.value)}
-                  >
-                    {['All Items', 'Customer Inward', 'Vendor Outward', 'Vendor Inward', 'Customer Outward'].map(tab => (
-                      <option key={tab} value={tab}>{tab}</option>
-                    ))}
-                  </select>
-                  
-                  <div className="search-box">
-                    <Search size={16} color="#94a3b8" />
-                    <input 
-                      type="text" 
-                      className="search-input" 
-                      placeholder="Quick search..." 
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="workflow-table-container">
-                <table className="workflow-table">
-                  <thead>
-                    <tr>
-                      <th className="workflow-th">TICKET #</th>
-                      <th className="workflow-th">CUSTOMER</th>
-                      <th className="workflow-th">PRODUCT</th>
-                      <th className="workflow-th">SERIAL</th>
-                      <th className="workflow-th">STAGE</th>
-                      <th className="workflow-th" style={{ textAlign: 'center' }}>ACTIONS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredWorkflowItems.map((item) => (
-                      <tr className="workflow-tr" key={item.id}>
-                        <td className="workflow-td ticket-id">{item.rma}</td>
-                        <td className="workflow-td">
-                          <span className="table-cell-main">{item.name}</span>
-                          <span className="table-cell-sub">{item.contactNumber}</span>
-                        </td>
-                        <td className="workflow-td">
-                          <span className="table-cell-main">{item.product.length > 25 ? item.product.substring(0, 25) + '...' : item.product}</span>
-                          <span className="table-cell-sub">{item.category} • {item.serviceVendor}</span>
-                        </td>
-                        <td className="workflow-td table-serial">{item.serialNumber}</td>
-                        <td className="workflow-td">
-                          <span className={`status-badge ${item.statusClass}`}>
-                            {item.status}
-                          </span>
-                        </td>
-                        <td className="workflow-td" style={{ textAlign: 'center' }}>
-                          {item.status !== 'CUSTOMER OUTWARD' && (
-                            <button 
-                              className="action-btn" 
-                              onClick={() => setAdvancingItem(item)}
-                              title="Click to advance status"
-                            >
-                              <ArrowRightCircle size={20} />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
+            <WorkflowTab 
+              workflowFilter={workflowFilter}
+              setWorkflowFilter={setWorkflowFilter}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              filteredWorkflowItems={filteredWorkflowItems}
+              setAdvancingItem={setAdvancingItem}
+              setAdvanceDate={setAdvanceDate}
+              setNewSerialNumber={setNewSerialNumber}
+              setCourierCharge={setCourierCharge}
+              getTodayDate={getTodayDate}
+              handleGenerateReport={handleGenerateReport}
+              setViewingItem={setViewingItem}
+            />
           )}
 
           {activeTab === 'ledgers' && (
-            <>
-              <div className="header">
-                <div className="header-text">
-                  <h1 className="page-title">Transaction Ledgers</h1>
-                  <p className="page-subtitle">Comprehensive history of every unit replacement.</p>
-                </div>
-              </div>
-
-              <div className="ledgers-grid">
-                {/* Customer History Column */}
-                <div className="ledger-column">
-                  <div className="ledger-column-header">
-                    <User size={18} color="var(--primary-blue)" />
-                    <span>Customer History</span>
-                  </div>
-                  
-                  {recentActivities.map(item => (
-                    <div className="customer-card" key={`cust-${item.id}`}>
-                      <div className="card-header-row">
-                        <div>
-                          <span className="card-label">CUSTOMER</span>
-                          <span className="card-title">{item.name}</span>
-                        </div>
-                        <span className="card-tag">{item.rma}</span>
-                      </div>
-                      
-                      <div className="customer-dates-row">
-                        <div className="date-group">
-                          <span className="card-label">Inward Date</span>
-                          <span className="date-value">{item.date}</span>
-                        </div>
-                        <div className="date-group">
-                          <span className="card-label">Outward Date</span>
-                          <span className={`date-value ${item.status === 'CUSTOMER OUTWARD' ? '' : 'pending'}`}>
-                            {item.status === 'CUSTOMER OUTWARD' ? new Date().toLocaleDateString('en-GB') : 'Pending'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="progress-track">
-                        <div className={`progress-segment ${item.status !== 'Pending' ? 'active' : ''}`}></div>
-                        <div className={`progress-segment ${item.status === 'VENDOR OUTWARD' || item.status === 'VENDOR INWARD' || item.status === 'CUSTOMER OUTWARD' ? 'active' : ''}`}></div>
-                        <div className={`progress-segment ${item.status === 'VENDOR INWARD' || item.status === 'CUSTOMER OUTWARD' ? 'active' : ''}`}></div>
-                        <div className={`progress-segment ${item.status === 'CUSTOMER OUTWARD' ? 'active' : ''}`}></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Vendor Log Column */}
-                <div className="ledger-column">
-                  <div className="ledger-column-header">
-                    <Truck size={18} color="#a855f7" />
-                    <span>Vendor Log</span>
-                  </div>
-
-                  {recentActivities.map(item => (
-                    <div className="vendor-card" key={`vend-${item.id}`}>
-                      <div className="card-header-row">
-                        <div>
-                          <span className="card-label">VENDOR</span>
-                          <span className="card-title">{item.serviceVendor}</span>
-                        </div>
-                        <span className="card-tag">{item.product.length > 15 ? item.product.substring(0, 15) + '...' : item.product}</span>
-                      </div>
-                      
-                      <div className="vendor-details-list">
-                        <div className="vendor-detail-row">
-                          <span className="vendor-detail-label">To Vendor:</span>
-                          <span className="vendor-detail-value">
-                            {item.status === 'CUSTOMER INWARD' ? '--' : item.date}
-                          </span>
-                        </div>
-                        <div className="vendor-detail-row">
-                          <span className="vendor-detail-label">From Vendor:</span>
-                          <span className={`vendor-detail-value ${(item.status === 'CUSTOMER INWARD' || item.status === 'VENDOR OUTWARD') ? 'in-progress' : ''}`}>
-                            {(item.status === 'CUSTOMER INWARD' || item.status === 'VENDOR OUTWARD') ? 'In Progress' : item.date}
-                          </span>
-                        </div>
-                        <div className="vendor-detail-row">
-                          <span className="vendor-detail-label">Final Serial:</span>
-                          <span className="vendor-detail-value serial">
-                            {item.status === 'CUSTOMER OUTWARD' ? `NEW-${item.serialNumber}` : item.serialNumber}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
+            <LedgersTab 
+              recentActivities={recentActivities}
+              setViewingItem={setViewingItem}
+            />
           )}
 
+          {activeTab === 'categories' && (
+            <ManageCategoriesTab 
+              categories={categories}
+              setCategories={setCategories}
+              newCategoryName={newCategoryName}
+              setNewCategoryName={setNewCategoryName}
+            />
+          )}
+
+          {activeTab === 'vendors' && (
+            <ManageVendorsTab 
+              vendors={vendors}
+              setVendors={setVendors}
+              newVendorName={newVendorName}
+              setNewVendorName={setNewVendorName}
+            />
+          )}
         </div>
 
         {/* Footer Status Bar */}
@@ -615,146 +733,37 @@ function App() {
         </div>
       </div>
 
-      {/* Modal Overlay */}
+      {/* Modals */}
       {isModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title-group">
-                <h2 className="modal-title">Customer Inward</h2>
-                <p className="modal-subtitle">Initialize a new replacement ticket.</p>
-              </div>
-              <button className="modal-close-btn" onClick={() => setIsModalOpen(false)}>
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Customer Name</label>
-                  <input 
-                    type="text" 
-                    className="form-input" 
-                    placeholder="e.g. John Doe"
-                    name="customerName"
-                    value={formData.customerName}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Contact Number</label>
-                  <input 
-                    type="text" 
-                    className="form-input" 
-                    placeholder="+1 (555) 000-0000"
-                    name="contactNumber"
-                    value={formData.contactNumber}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Product Name / Model</label>
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  placeholder="e.g. ASUS ROG Strix B550-F"
-                  name="productName"
-                  value={formData.productName}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Category</label>
-                  <select 
-                    className="form-select"
-                    name="category"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                  >
-                    <option value="Motherboard">Motherboard</option>
-                    <option value="GPU">Graphics Card</option>
-                    <option value="CPU">Processor</option>
-                    <option value="PSU">Power Supply</option>
-                    <option value="Storage">Storage</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Service Vendor</label>
-                  <select 
-                    className="form-select"
-                    name="serviceVendor"
-                    value={formData.serviceVendor}
-                    onChange={handleInputChange}
-                  >
-                    <option value="ASUS Service">ASUS Service</option>
-                    <option value="Gigabyte Care">Gigabyte Care</option>
-                    <option value="MSI Support">MSI Support</option>
-                    <option value="Samsung">Samsung</option>
-                    <option value="Corsair">Corsair</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Original Serial #</label>
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  placeholder="S/N: XXX-XXX-XXX"
-                  name="serialNumber"
-                  value={formData.serialNumber}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Problem Description</label>
-                <textarea 
-                  className="form-textarea" 
-                  placeholder="Describe the issue reported by the customer..."
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                ></textarea>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button className="btn-cancel" onClick={() => setIsModalOpen(false)}>Cancel</button>
-              <button className="btn-save" onClick={handleSaveInward}>Save Inward Entry</button>
-            </div>
-          </div>
-        </div>
+        <NewInwardModal
+          setIsModalOpen={setIsModalOpen}
+          formData={formData}
+          setFormData={setFormData}
+          handleInputChange={handleInputChange}
+          categories={categories}
+          vendors={vendors}
+          handleSaveInward={handleSaveInward}
+        />
       )}
 
-      {/* Advance Workflow Modal */}
-      {advancingItem && (
-        <div className="modal-overlay" onClick={() => setAdvancingItem(null)}>
-          <div className="modal-content advance-modal" onClick={e => e.stopPropagation()}>
-            <div className="advance-modal-header">
-              <h2 className="modal-title">Advance Workflow</h2>
-              <p className="modal-subtitle">Moving <span style={{ fontWeight: 700, color: '#0f172a' }}>{advancingItem.rma}</span> to the next stage.</p>
-            </div>
-            
-            <div className="advance-modal-body">
-              <div className="current-state-box">
-                <span className="current-state-label">CURRENT STATE</span>
-                <span className="current-state-value">{advancingItem.status}</span>
-              </div>
-            </div>
+      <AdvanceWorkflowModal
+        advancingItem={advancingItem}
+        setAdvancingItem={setAdvancingItem}
+        shippingImagePreview={shippingImagePreview}
+        setShippingImagePreview={setShippingImagePreview}
+        advanceDate={advanceDate}
+        setAdvanceDate={setAdvanceDate}
+        newSerialNumber={newSerialNumber}
+        setNewSerialNumber={setNewSerialNumber}
+        courierCharge={courierCharge}
+        setCourierCharge={setCourierCharge}
+        confirmAdvanceStatus={confirmAdvanceStatus}
+      />
 
-            <div className="advance-modal-footer">
-              <button className="btn-text-cancel" onClick={() => setAdvancingItem(null)}>Cancel</button>
-              <button className="btn-confirm" onClick={confirmAdvanceStatus}>Confirm Transition</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <TicketDetailsModal
+        viewingItem={viewingItem}
+        setViewingItem={setViewingItem}
+      />
     </div>
   );
 }
