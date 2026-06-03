@@ -206,6 +206,7 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
                 type="file"
                 className="form-input"
                 accept="image/*"
+                capture="environment"
                 onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.files[0] }))}
                 style={{ padding: '8px' }}
               />

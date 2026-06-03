@@ -418,7 +418,10 @@ body {
   body {
     background: white;
   }
-  .layout > :not(.modal-overlay) {
+  .layout:has(.modal-overlay) > .main-container {
+    display: none !important;
+  }
+  .layout:has(.modal-overlay) > .sidebar {
     display: none !important;
   }
   .modal-overlay {
@@ -442,6 +445,35 @@ body {
   input[type="file"],
   .form-group:has(input[type="file"]) {
     display: none !important;
+  }
+
+  /* Global Print Hide Elements */
+  .sidebar,
+  .mobile-header,
+  .print-controls,
+  .new-inward-btn,
+  .footer {
+    display: none !important;
+  }
+  
+  .layout {
+    display: block !important;
+  }
+
+  .main-container, .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  
+  .print-reports-container .print-content {
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .print-header-only {
+    display: block !important;
   }
   .print-only {
     display: block !important;

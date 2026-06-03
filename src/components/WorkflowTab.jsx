@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, ArrowRightCircle, Share } from 'lucide-react';
+import { Search, ArrowRightCircle, Share, Eye } from 'lucide-react';
 
 export default function WorkflowTab({
   workflowFilter, setWorkflowFilter,
@@ -52,54 +52,86 @@ export default function WorkflowTab({
             </tr>
           </thead>
           <tbody>
-            {filteredWorkflowItems.map((item) => (
-              <tr className="workflow-tr" key={item.id} onClick={() => setViewingItem(item)} style={{ cursor: 'pointer' }}>
-                <td className="workflow-td ticket-id">{item.rma}</td>
+            {Object.values(filteredWorkflowItems.reduce((acc, item) => {
+              if (!acc[item.rma]) {
+                acc[item.rma] = {
+                  mainItem: item,
+                  services: []
+                };
+              }
+              acc[item.rma].services.push(item);
+              return acc;
+            }, {})).map((group) => {
+              const { mainItem, services } = group;
+              const hasMultiple = services.length > 1;
+              return (
+              <tr className="workflow-tr" key={mainItem.rma} onClick={() => setViewingItem(mainItem)} style={{ cursor: 'pointer' }}>
+                <td className="workflow-td ticket-id">{mainItem.rma}</td>
                 <td className="workflow-td">
-                  <span className="table-cell-main">{item.name}</span>
-                  <span className="table-cell-sub">{item.contactNumber}</span>
+                  <span className="table-cell-main">{mainItem.name}</span>
+                  <span className="table-cell-sub">{mainItem.contactNumber}</span>
                 </td>
                 <td className="workflow-td">
-                  <span className="table-cell-main">{item.product.length > 25 ? item.product.substring(0, 25) + '...' : item.product}</span>
-                  <span className="table-cell-sub">{item.category} • {item.serviceVendor}</span>
+                  <span className="table-cell-main">
+                    {mainItem.product.length > 25 ? mainItem.product.substring(0, 25) + '...' : mainItem.product}
+                  </span>
+                  <span className="table-cell-sub">
+                    {mainItem.category} • {mainItem.serviceVendor}
+                  </span>
                 </td>
-                <td className="workflow-td table-serial">{item.serialNumber}</td>
+                <td className="workflow-td table-serial">
+                  {mainItem.serialNumber}
+                </td>
                 <td className="workflow-td">
-                  <span className={`status-badge ${item.statusClass}`}>
-                    {item.status}
+                  <span className={`status-badge ${mainItem.statusClass}`}>
+                    {mainItem.status}
                   </span>
                 </td>
                 <td className="workflow-td" style={{ textAlign: 'center' }}>
-                  {item.status !== 'CUSTOMER OUTWARD' && item.status !== 'COMPLETED' ? (
+                  {hasMultiple ? (
                     <button
                       className="action-btn"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setAdvancingItem(item);
-                        setAdvanceDate(getTodayDate());
-                        setNewSerialNumber('');
-                        setCourierCharge('');
+                        setViewingItem(mainItem);
                       }}
-                      title="Click to advance status"
+                      title="View all services to advance"
+                      style={{ color: '#64748b', backgroundColor: '#f1f5f9' }}
                     >
-                      <ArrowRightCircle size={20} />
+                      <Eye size={20} />
                     </button>
                   ) : (
-                    <button
-                      className="action-btn"
-                      style={{ color: '#059669', backgroundColor: '#d1fae5' }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleGenerateReport(item);
-                      }}
-                      title="Generate Final Report & Send to WhatsApp"
-                    >
-                      <Share size={20} />
-                    </button>
+                    mainItem.status !== 'CUSTOMER OUTWARD' && mainItem.status !== 'COMPLETED' ? (
+                      <button
+                        className="action-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAdvancingItem(mainItem);
+                          setAdvanceDate(getTodayDate());
+                          setNewSerialNumber('');
+                          setCourierCharge('');
+                        }}
+                        title="Click to advance status"
+                      >
+                        <ArrowRightCircle size={20} />
+                      </button>
+                    ) : (
+                      <button
+                        className="action-btn"
+                        style={{ color: '#059669', backgroundColor: '#d1fae5' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleGenerateReport(mainItem);
+                        }}
+                        title="Generate Final Report & Send to WhatsApp"
+                      >
+                        <Share size={20} />
+                      </button>
+                    )
                   )}
                 </td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>

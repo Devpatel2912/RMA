@@ -8,7 +8,8 @@ import {
   Plus,
   Building2,
   LogOut,
-  Menu
+  Menu,
+  Printer
 } from 'lucide-react';
 import './index.css';
 import './modal.css';
@@ -26,6 +27,7 @@ import ManageVendorsTab from './components/ManageVendorsTab';
 import NewInwardModal from './components/NewInwardModal';
 import AdvanceWorkflowModal from './components/AdvanceWorkflowModal';
 import TicketDetailsModal from './components/TicketDetailsModal';
+import PrintReportsTab from './components/PrintReportsTab';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -54,11 +56,11 @@ function App() {
   ]);
 
   const [vendors, setVendors] = useState([
-    'ASUS Service',
-    'Gigabyte Care',
-    'MSI Support',
-    'Samsung',
-    'Corsair'
+    { companyName: 'ASUS Service', address: '123 Tech Park, Silicon Valley', gstNumber: '29ABCDE1234F1Z5', phoneNumber: '+1 555-0198', email: 'support@asus.com' },
+    { companyName: 'Gigabyte Care', address: '45 Innovation Way', gstNumber: '29XYZ1234F1Z5', phoneNumber: '+1 555-0122', email: 'care@gigabyte.com' },
+    { companyName: 'MSI Support', address: '88 Gaming Blvd', gstNumber: '29GHIJ1234F1Z5', phoneNumber: '+1 555-0177', email: 'help@msi.com' },
+    { companyName: 'Samsung', address: 'Corporate Center, Seoul', gstNumber: '29KLMN1234F1Z5', phoneNumber: '+1 555-0188', email: 'rma@samsung.com' },
+    { companyName: 'Corsair', address: 'Power Delivery Ave', gstNumber: '29OPQR1234F1Z5', phoneNumber: '+1 555-0199', email: 'support@corsair.com' }
   ]);
 
   const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -74,7 +76,8 @@ function App() {
     serialNumber: '',
     description: '',
     image: null,
-    inwardDate: getTodayDate()
+    inwardDate: getTodayDate(),
+    rma: null
   });
 
   const [recentActivities, setRecentActivities] = useState([
@@ -178,8 +181,8 @@ function App() {
       return;
     }
 
-    const newId = Math.floor(Math.random() * 100).toString();
-    const newRma = `RMA-${Math.floor(100000 + Math.random() * 900000)}`;
+    const newId = Math.floor(Math.random() * 100).toString() + Date.now().toString().slice(-4);
+    const newRma = formData.rma || `RMA-${Math.floor(100000 + Math.random() * 900000)}`;
 
     let dateStr = "";
     if (formData.inwardDate) {
@@ -207,57 +210,28 @@ function App() {
         inwardImageURL: imgData
       };
 
-      // Format WhatsApp Message
-      let whatsappMessage = `*New RMA Inward Entry*\n\n`;
-      whatsappMessage += `*Ticket #:* ${newRma}\n`;
-      whatsappMessage += `*Customer Name:* ${formData.customerName}\n`;
-      whatsappMessage += `*Contact:* ${formData.contactNumber}\n`;
-      if (formData.email) whatsappMessage += `*Email:* ${formData.email}\n`;
-      whatsappMessage += `*Product:* ${formData.productName}\n`;
-      whatsappMessage += `*Category:* ${formData.category}\n`;
-      whatsappMessage += `*Vendor:* ${formData.serviceVendor}\n`;
-      if (formData.serialNumber) whatsappMessage += `*Serial #:* ${formData.serialNumber}\n`;
-      if (formData.description) whatsappMessage += `*Description:* ${formData.description}\n`;
-      whatsappMessage += `*Date:* ${dateStr}\n`;
-      if (formData.image) whatsappMessage += `\n*Note:* Please manually attach the downloaded PDF.`;
-
-      const triggerWhatsApp = () => {
-        const phoneNum = formData.contactNumber.replace(/[\s\-\(\)\+]/g, '');
-        if (phoneNum) {
-          window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
-        }
-      };
-
       const doc = new jsPDF();
-      
-      // Header background
-      doc.setFillColor(15, 23, 42); // #0f172a
+      doc.setFillColor(15, 23, 42);
       doc.rect(0, 0, 210, 40, 'F');
-      
-      // Header text
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(28);
       doc.setFont("helvetica", "bold");
       doc.text("RMA Flow", 20, 22);
-      
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
       doc.text("CUSTOMER INWARD TICKET", 20, 32);
-
       doc.setFont("helvetica", "bold");
       doc.text(`TICKET #: ${newRma}`, 140, 27);
       
       let yPos = 60;
-      
       const drawField = (label, value, x, y) => {
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
-        doc.setTextColor(100, 116, 139); // slate-500
+        doc.setTextColor(100, 116, 139);
         doc.text(label.toUpperCase(), x, y);
-        
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
-        doc.setTextColor(15, 23, 42); // slate-900
+        doc.setTextColor(15, 23, 42);
         const textVal = value ? value.toString() : "N/A";
         const splitVal = doc.splitTextToSize(textVal, 80);
         doc.text(splitVal, x, y + 6);
@@ -267,19 +241,15 @@ function App() {
       drawField("Customer Name", formData.customerName, 20, yPos);
       drawField("Contact Number", formData.contactNumber, 110, yPos);
       yPos += 20;
-
       drawField("Email Address", formData.email, 20, yPos);
       drawField("Inward Date", dateStr, 110, yPos);
       yPos += 20;
-
-      doc.setDrawColor(226, 232, 240); // slate-200
+      doc.setDrawColor(226, 232, 240);
       doc.line(20, yPos, 190, yPos);
       yPos += 15;
-
       drawField("Product Model", formData.productName, 20, yPos);
       drawField("Category", formData.category, 110, yPos);
       yPos += 20;
-
       drawField("Service Vendor", formData.serviceVendor, 20, yPos);
       drawField("Serial Number", formData.serialNumber, 110, yPos);
       yPos += 20;
@@ -287,12 +257,10 @@ function App() {
       if (formData.description) {
         doc.line(20, yPos, 190, yPos);
         yPos += 15;
-        
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(100, 116, 139);
         doc.text("PROBLEM DESCRIPTION", 20, yPos);
-        
         doc.setFontSize(12);
         doc.setFont("helvetica", "normal");
         doc.setTextColor(15, 23, 42);
@@ -300,7 +268,7 @@ function App() {
         doc.text(splitDesc, 20, yPos + 6);
         yPos += (splitDesc.length * 6) + 15;
       }
-
+      
       if (imgData) {
         try {
           doc.setFontSize(10);
@@ -314,8 +282,8 @@ function App() {
         }
       }
       
+      window.open(doc.output('bloburl'), '_blank');
       doc.save(`${newRma}_Inward_Ticket.pdf`);
-      triggerWhatsApp();
 
       setRecentActivities(prev => [newActivity, ...prev]);
       setIsModalOpen(false);
@@ -329,7 +297,8 @@ function App() {
         serialNumber: '',
         description: '',
         image: null,
-        inwardDate: getTodayDate()
+        inwardDate: getTodayDate(),
+        rma: null
       });
     };
 
@@ -346,6 +315,8 @@ function App() {
 
   const confirmAdvanceStatus = () => {
     if (!advancingItem) return;
+
+    let updatedItem = null;
 
     setRecentActivities(activities => activities.map(act => {
       if (act.id === advancingItem.id) {
@@ -371,7 +342,7 @@ function App() {
           const [year, month, day] = advanceDate.split('-');
           formattedDate = `${day}/${month}/${year}`;
         }
-        let updatedItem = { ...act, status: newStatus, statusClass: newClass, date: formattedDate };
+        updatedItem = { ...act, status: newStatus, statusClass: newClass, date: formattedDate };
         if (newSerialNumber) {
           updatedItem.oldSerialNumber = act.serialNumber;
           updatedItem.serialNumber = newSerialNumber;
@@ -379,10 +350,96 @@ function App() {
         if (courierCharge) {
           updatedItem.courierCharge = courierCharge;
         }
+        if (shippingImagePreview) {
+          if (act.status === 'VENDOR OUTWARD') {
+            updatedItem.outwardImageURL = shippingImagePreview;
+          } else if (act.status === 'VENDOR INWARD') {
+            updatedItem.vendorInwardImageURL = shippingImagePreview;
+          }
+        }
         return updatedItem;
       }
       return act;
     }));
+
+    // Generate PDF and send WhatsApp ONLY if transitioning FROM CUSTOMER INWARD
+    if (advancingItem.status === 'CUSTOMER INWARD') {
+      const itemToSend = updatedItem || advancingItem;
+      let whatsappMessage = `*New RMA Inward Entry*\n\n`;
+      whatsappMessage += `*Ticket #:* ${itemToSend.rma}\n`;
+      whatsappMessage += `*Customer Name:* ${itemToSend.name}\n`;
+      whatsappMessage += `*Contact:* ${itemToSend.contactNumber}\n`;
+      if (itemToSend.email) whatsappMessage += `*Email:* ${itemToSend.email}\n`;
+      whatsappMessage += `*Product:* ${itemToSend.product}\n`;
+      whatsappMessage += `*Category:* ${itemToSend.category}\n`;
+      whatsappMessage += `*Vendor:* ${itemToSend.serviceVendor}\n`;
+      if (itemToSend.serialNumber) whatsappMessage += `*Serial #:* ${itemToSend.serialNumber}\n`;
+      whatsappMessage += `*Date:* ${itemToSend.date}\n`;
+      whatsappMessage += `\n*Note:* Please manually attach the downloaded PDF.`;
+
+      const phoneNum = itemToSend.contactNumber.replace(/[\s\-\(\)\+]/g, '');
+      if (phoneNum) {
+        window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
+      }
+
+      const doc = new jsPDF();
+      doc.setFillColor(15, 23, 42);
+      doc.rect(0, 0, 210, 40, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(28);
+      doc.setFont("helvetica", "bold");
+      doc.text("RMA Flow", 20, 22);
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text("CUSTOMER INWARD TICKET", 20, 32);
+      doc.setFont("helvetica", "bold");
+      doc.text(`TICKET #: ${itemToSend.rma}`, 140, 27);
+      
+      let yPos = 60;
+      const drawField = (label, value, x, y) => {
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(100, 116, 139);
+        doc.text(label.toUpperCase(), x, y);
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(15, 23, 42);
+        const textVal = value ? value.toString() : "N/A";
+        const splitVal = doc.splitTextToSize(textVal, 80);
+        doc.text(splitVal, x, y + 6);
+        return splitVal.length * 6;
+      };
+      
+      drawField("Customer Name", itemToSend.name, 20, yPos);
+      drawField("Contact Number", itemToSend.contactNumber, 110, yPos);
+      yPos += 20;
+      drawField("Email Address", itemToSend.email, 20, yPos);
+      drawField("Inward Date", itemToSend.date, 110, yPos);
+      yPos += 20;
+      doc.setDrawColor(226, 232, 240);
+      doc.line(20, yPos, 190, yPos);
+      yPos += 15;
+      drawField("Product Model", itemToSend.product, 20, yPos);
+      drawField("Category", itemToSend.category, 110, yPos);
+      yPos += 20;
+      drawField("Service Vendor", itemToSend.serviceVendor, 20, yPos);
+      drawField("Serial Number", itemToSend.serialNumber, 110, yPos);
+      yPos += 20;
+      
+      if (itemToSend.inwardImageURL) {
+        try {
+          doc.setFontSize(10);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(100, 116, 139);
+          doc.text("ATTACHED IMAGE", 20, yPos);
+          yPos += 5;
+          doc.addImage(itemToSend.inwardImageURL, 'JPEG', 20, yPos, 100, 100, undefined, 'FAST');
+        } catch(e) {
+          console.error("Failed to add image to PDF", e);
+        }
+      }
+      doc.save(`${itemToSend.rma}_Inward_Ticket.pdf`);
+    }
 
     setAdvancingItem(null);
     setShippingImagePreview(null);
@@ -474,17 +531,50 @@ function App() {
 
     if (item.inwardImageURL) {
       try {
+        if (yPos > 200) { doc.addPage(); yPos = 20; }
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(100, 116, 139);
-        doc.text("INWARD IMAGE", 20, yPos);
+        doc.text("CUSTOMER INWARD IMAGE", 20, yPos);
         yPos += 5;
         doc.addImage(item.inwardImageURL, 'JPEG', 20, yPos, 100, 100, undefined, 'FAST');
+        yPos += 110;
       } catch(e) {
         console.error("Failed to add image to PDF", e);
       }
     }
     
+    if (item.outwardImageURL) {
+      try {
+        if (yPos > 200) { doc.addPage(); yPos = 20; }
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(100, 116, 139);
+        doc.text("SHIPPING SLIP IMAGE", 20, yPos);
+        yPos += 5;
+        doc.addImage(item.outwardImageURL, 'JPEG', 20, yPos, 100, 100, undefined, 'FAST');
+        yPos += 110;
+      } catch(e) {
+        console.error("Failed to add image to PDF", e);
+      }
+    }
+
+    if (item.vendorInwardImageURL) {
+      try {
+        if (yPos > 200) { doc.addPage(); yPos = 20; }
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(100, 116, 139);
+        doc.text("REPLACEMENT PRODUCT IMAGE", 20, yPos);
+        yPos += 5;
+        doc.addImage(item.vendorInwardImageURL, 'JPEG', 20, yPos, 100, 100, undefined, 'FAST');
+        yPos += 110;
+      } catch(e) {
+        console.error("Failed to add image to PDF", e);
+      }
+    }
+    
+    window.open(doc.output('bloburl'), '_blank');
     doc.save(`${item.rma}_Final_Report.pdf`);
 
     setRecentActivities(activities => activities.map(act => {
@@ -641,6 +731,13 @@ function App() {
             <Building2 size={20} />
             <span>Vendors</span>
           </div>
+          <div
+            className={`nav-item ${activeTab === 'print' ? 'active' : ''}`}
+            onClick={() => handleTabChange('print')}
+          >
+            <Printer size={20} />
+            <span>Reports</span>
+          </div>
         </div>
 
         <button className="new-inward-btn" onClick={() => { setIsModalOpen(true); setIsMobileMenuOpen(false); }}>
@@ -710,6 +807,10 @@ function App() {
               setNewVendorName={setNewVendorName}
             />
           )}
+
+          {activeTab === 'print' && (
+            <PrintReportsTab recentActivities={recentActivities} />
+          )}
         </div>
 
         {/* Footer Status Bar */}
@@ -741,10 +842,46 @@ function App() {
           setFormData={setFormData}
           handleInputChange={handleInputChange}
           categories={categories}
-          vendors={vendors}
+          vendors={vendors.map(v => typeof v === 'string' ? v : v.companyName)}
           handleSaveInward={handleSaveInward}
         />
       )}
+
+      <TicketDetailsModal
+        viewingItem={viewingItem}
+        setViewingItem={setViewingItem}
+        recentActivities={recentActivities}
+        categories={categories}
+        vendors={vendors.map(v => typeof v === 'string' ? v : v.companyName)}
+        setAdvancingItem={setAdvancingItem}
+        setAdvanceDate={setAdvanceDate}
+        setNewSerialNumber={setNewSerialNumber}
+        setCourierCharge={setCourierCharge}
+        getTodayDate={getTodayDate}
+        handleGenerateReport={handleGenerateReport}
+        onSaveInlineService={(inlineData) => {
+          const newId = Math.floor(Math.random() * 100).toString() + Date.now().toString().slice(-4);
+          const today = new Date();
+          const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+          
+          const newActivity = {
+            id: newId,
+            name: viewingItem.name,
+            contactNumber: viewingItem.contactNumber,
+            email: viewingItem.email,
+            product: inlineData.productName,
+            category: inlineData.category,
+            serviceVendor: inlineData.serviceVendor,
+            serialNumber: inlineData.serialNumber,
+            rma: viewingItem.rma,
+            status: "CUSTOMER INWARD",
+            date: dateStr,
+            statusClass: "bg-blue-light",
+            inwardImageURL: inlineData.image
+          };
+          setRecentActivities(prev => [newActivity, ...prev]);
+        }}
+      />
 
       <AdvanceWorkflowModal
         advancingItem={advancingItem}
@@ -758,11 +895,6 @@ function App() {
         courierCharge={courierCharge}
         setCourierCharge={setCourierCharge}
         confirmAdvanceStatus={confirmAdvanceStatus}
-      />
-
-      <TicketDetailsModal
-        viewingItem={viewingItem}
-        setViewingItem={setViewingItem}
       />
     </div>
   );
