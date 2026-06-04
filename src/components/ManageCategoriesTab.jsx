@@ -1,6 +1,56 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { Pencil, Trash2 } from 'lucide-react';
 
-export default function ManageCategoriesTab({ categories, setCategories, newCategoryName, setNewCategoryName }) {
+export default function ManageCategoriesTab({ categories, setCategories, newCategoryName, setNewCategoryName, userRole, fetchBackendData }) {
+  const [fullCategories, setFullCategories] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState('');
+
+  const loadCategories = async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const res = await axios.get(`${baseUrl}/categories`);
+      setFullCategories(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this category?")) {
+      try {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+        await axios.delete(`${baseUrl}/categories/${id}`);
+        loadCategories();
+        fetchBackendData(); // update global dropdowns
+      } catch (err) {
+        if (err.response && err.response.data && err.response.data.error) {
+          alert(err.response.data.error);
+        } else {
+          alert("Failed to delete category.");
+        }
+      }
+    }
+  };
+
+  const handleUpdate = async (id) => {
+    if (!editName.trim()) return;
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      await axios.put(`${baseUrl}/categories/${id}`, { name: editName.trim() });
+      setEditingId(null);
+      loadCategories();
+      fetchBackendData(); // update global dropdowns
+    } catch (err) {
+      alert("Failed to update category.");
+    }
+  };
+
   return (
     <>
       <div className="header">
@@ -22,11 +72,18 @@ export default function ManageCategoriesTab({ categories, setCategories, newCate
           />
           <button 
             className="btn-save" 
-            onClick={() => {
-              if (newCategoryName.trim() && !categories.includes(newCategoryName.trim())) {
-                setCategories(prev => [...prev, newCategoryName.trim()]);
+            onClick={async () => {
+              if (newCategoryName.trim()) {
+                try {
+                  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+                  await axios.post(`${baseUrl}/categories`, { name: newCategoryName.trim() });
+                  setNewCategoryName('');
+                  loadCategories();
+                  fetchBackendData();
+                } catch (err) {
+                  alert("Failed to add category. Note: Only Admins can add categories.");
+                }
               }
-              setNewCategoryName('');
             }}
             style={{ padding: '0 24px', height: 'auto' }}
           >
@@ -35,9 +92,29 @@ export default function ManageCategoriesTab({ categories, setCategories, newCate
         </div>
 
         <div style={{ display: 'grid', gap: '12px' }}>
-          {categories.map((cat, idx) => (
-            <div key={idx} style={{ padding: '16px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '15px', color: '#0f172a', fontWeight: '500' }}>
-              {cat}
+          {fullCategories.map((cat) => (
+            <div key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '15px', color: '#0f172a', fontWeight: '500' }}>
+              {editingId === cat.id ? (
+                <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+                  <input type="text" className="form-input" value={editName} onChange={(e) => setEditName(e.target.value)} style={{ padding: '4px 8px' }} />
+                  <button className="btn-save" style={{ padding: '4px 12px' }} onClick={() => handleUpdate(cat.id)}>Save</button>
+                  <button className="btn-cancel" style={{ padding: '4px 12px' }} onClick={() => setEditingId(null)}>Cancel</button>
+                </div>
+              ) : (
+                <>
+                  <span>{cat.name}</span>
+                  {userRole === 'ADMIN' && (
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button onClick={() => { setEditingId(cat.id); setEditName(cat.name); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                        <Pencil size={18} />
+                      </button>
+                      <button onClick={() => handleDelete(cat.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}>
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           ))}
         </div>

@@ -67,7 +67,7 @@ const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
 
 export default function TicketDetailsModal({ 
   viewingItem, setViewingItem, recentActivities, categories, vendors, onSaveInlineService,
-  setAdvancingItem, setAdvanceDate, setNewSerialNumber, setCourierCharge, getTodayDate, handleGenerateReport
+  setAdvancingItem, setAdvanceDate, setNewSerialNumber, setCourierCharge, getTodayDate, handleGenerateReport, userRole
 }) {
   const [isAddingService, setIsAddingService] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
@@ -205,33 +205,37 @@ export default function TicketDetailsModal({
                           {service.status}
                         </span>
                         
-                        {service.status !== 'CUSTOMER OUTWARD' && service.status !== 'COMPLETED' ? (
-                          <button
-                            className="action-btn"
-                            style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px' }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setAdvancingItem(service);
-                              setAdvanceDate(getTodayDate());
-                              setNewSerialNumber('');
-                              setCourierCharge('');
-                            }}
-                            title="Click to advance status"
-                          >
-                            <ArrowRightCircle size={18} />
-                          </button>
+                        {userRole === 'ADMIN' ? (
+                          service.status !== 'CUSTOMER OUTWARD' && service.status !== 'COMPLETED' ? (
+                            <button
+                              className="action-btn"
+                              style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setAdvancingItem(service);
+                                setAdvanceDate(getTodayDate());
+                                setNewSerialNumber('');
+                                setCourierCharge('');
+                              }}
+                              title="Click to advance status"
+                            >
+                              <ArrowRightCircle size={18} />
+                            </button>
+                          ) : (
+                            <button
+                              className="action-btn"
+                              style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', padding: '4px' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleGenerateReport(service);
+                              }}
+                              title="Generate Final Report & Send to WhatsApp"
+                            >
+                              <Share size={18} />
+                            </button>
+                          )
                         ) : (
-                          <button
-                            className="action-btn"
-                            style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', padding: '4px' }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleGenerateReport(service);
-                            }}
-                            title="Generate Final Report & Send to WhatsApp"
-                          >
-                            <Share size={18} />
-                          </button>
+                          <span title="Action restricted to admin" style={{color: '#cbd5e1'}}>—</span>
                         )}
                       </div>
                     </td>

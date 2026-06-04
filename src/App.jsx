@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import jsPDF from 'jspdf';
 import {
   LayoutDashboard,
@@ -9,7 +10,9 @@ import {
   Building2,
   LogOut,
   Menu,
-  Printer
+  Printer,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import './index.css';
 import './modal.css';
@@ -30,7 +33,10 @@ import TicketDetailsModal from './components/TicketDetailsModal';
 import PrintReportsTab from './components/PrintReportsTab';
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,21 +53,8 @@ function App() {
   const [workflowFilter, setWorkflowFilter] = useState('All Items');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const [categories, setCategories] = useState([
-    'Motherboard',
-    'GPU',
-    'CPU',
-    'PSU',
-    'Storage'
-  ]);
-
-  const [vendors, setVendors] = useState([
-    { companyName: 'ASUS Service', address: '123 Tech Park, Silicon Valley', gstNumber: '29ABCDE1234F1Z5', phoneNumber: '+1 555-0198', email: 'support@asus.com' },
-    { companyName: 'Gigabyte Care', address: '45 Innovation Way', gstNumber: '29XYZ1234F1Z5', phoneNumber: '+1 555-0122', email: 'care@gigabyte.com' },
-    { companyName: 'MSI Support', address: '88 Gaming Blvd', gstNumber: '29GHIJ1234F1Z5', phoneNumber: '+1 555-0177', email: 'help@msi.com' },
-    { companyName: 'Samsung', address: 'Corporate Center, Seoul', gstNumber: '29KLMN1234F1Z5', phoneNumber: '+1 555-0188', email: 'rma@samsung.com' },
-    { companyName: 'Corsair', address: 'Power Delivery Ave', gstNumber: '29OPQR1234F1Z5', phoneNumber: '+1 555-0199', email: 'support@corsair.com' }
-  ]);
+  const [categories, setCategories] = useState([]);
+  const [vendors, setVendors] = useState([]);
 
   const getTodayDate = () => new Date().toISOString().split('T')[0];
 
@@ -80,60 +73,32 @@ function App() {
     rma: null
   });
 
-  const [recentActivities, setRecentActivities] = useState([
-    {
-      id: "84",
-      name: "Alex Rivers",
-      contactNumber: "+1 555-0123",
-      product: "ROG Strix Z790-E Gaming WiFi",
-      category: "Motherboard",
-      serviceVendor: "ASUS Service",
-      serialNumber: "SN982341829",
-      rma: "RMA-842109",
-      status: "CUSTOMER INWARD",
-      date: "01/06/2026",
-      statusClass: "bg-blue-light"
-    },
-    {
-      id: "12",
-      name: "Sarah Jenkins",
-      contactNumber: "+1 555-4567",
-      product: "GeForce RTX 4080 Suprim X",
-      category: "GPU",
-      serviceVendor: "MSI Support",
-      serialNumber: "SN123908475",
-      rma: "RMA-129485",
-      status: "VENDOR OUTWARD",
-      date: "31/05/2026",
-      statusClass: "bg-yellow-light"
-    },
-    {
-      id: "77",
-      name: "Michael Chen",
-      contactNumber: "+1 555-8901",
-      product: "990 Pro 2TB NVMe SSD",
-      category: "Storage",
-      serviceVendor: "Samsung",
-      serialNumber: "SN456123789",
-      rma: "RMA-772103",
-      status: "VENDOR INWARD",
-      date: "31/05/2026",
-      statusClass: "bg-purple-light"
-    },
-    {
-      id: "33",
-      name: "David Miller",
-      contactNumber: "+1 555-2345",
-      product: "RM850x 80 PLUS Gold PSU",
-      category: "PSU",
-      serviceVendor: "Corsair",
-      serialNumber: "SN789456123",
-      rma: "RMA-331092",
-      status: "CUSTOMER OUTWARD",
-      date: "31/05/2026",
-      statusClass: "bg-green-light"
+  const [recentActivities, setRecentActivities] = useState([]);
+
+  const [userRole, setUserRole] = useState(localStorage.getItem('userRole') || null);
+
+  const fetchBackendData = async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const catRes = await axios.get(`${baseUrl}/categories`);
+      setCategories(catRes.data.map(c => c.name));
+      const venRes = await axios.get(`${baseUrl}/vendors`);
+      setVendors(venRes.data);
+      const ticRes = await axios.get(`${baseUrl}/tickets`);
+      setRecentActivities(ticRes.data);
+    } catch (e) {
+      console.error("Failed to fetch data:", e);
     }
-  ]);
+  };
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      setIsLoggedIn(true);
+      fetchBackendData();
+    }
+  }, []);
 
   // Barcode Scanner Global Listener
   useEffect(() => {
@@ -285,20 +250,39 @@ function App() {
       window.open(doc.output('bloburl'), '_blank');
       doc.save(`${newRma}_Inward_Ticket.pdf`);
 
-      setRecentActivities(prev => [newActivity, ...prev]);
-      setIsModalOpen(false);
-      setFormData({
-        customerName: '',
-        contactNumber: '',
-        email: '',
-        productName: '',
-        category: 'Motherboard',
-        serviceVendor: 'ASUS Service',
-        serialNumber: '',
-        description: '',
-        image: null,
-        inwardDate: getTodayDate(),
-        rma: null
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      axios.post(`${baseUrl}/tickets`, {
+        rma: newRma,
+        customerName: formData.customerName,
+        contactNumber: formData.contactNumber,
+        email: formData.email,
+        product: formData.productName,
+        serialNumber: formData.serialNumber,
+        status: "CUSTOMER INWARD",
+        date: dateStr,
+        description: formData.description,
+        category: formData.category,
+        serviceVendor: formData.serviceVendor,
+        inwardImageURL: imgData
+      }).then(() => {
+        fetchBackendData();
+        setIsModalOpen(false);
+        setFormData({
+          customerName: '',
+          contactNumber: '',
+          email: '',
+          productName: '',
+          category: 'Motherboard',
+          serviceVendor: 'ASUS Service',
+          serialNumber: '',
+          description: '',
+          image: null,
+          inwardDate: getTodayDate(),
+          rma: null
+        });
+      }).catch(err => {
+        console.error("Failed to create ticket:", err);
+        alert("Failed to create ticket");
       });
     };
 
@@ -316,51 +300,64 @@ function App() {
   const confirmAdvanceStatus = () => {
     if (!advancingItem) return;
 
-    let updatedItem = null;
+    let newStatus, newClass;
+    switch (advancingItem.status) {
+      case 'CUSTOMER INWARD':
+        newStatus = 'VENDOR OUTWARD';
+        newClass = 'bg-yellow-light';
+        break;
+      case 'VENDOR OUTWARD':
+        newStatus = 'VENDOR INWARD';
+        newClass = 'bg-purple-light';
+        break;
+      case 'VENDOR INWARD':
+        newStatus = 'CUSTOMER OUTWARD';
+        newClass = 'bg-green-light';
+        break;
+      default:
+        return;
+    }
+    let formattedDate = advancingItem.date;
+    if (advanceDate) {
+      const [year, month, day] = advanceDate.split('-');
+      formattedDate = `${day}/${month}/${year}`;
+    }
 
-    setRecentActivities(activities => activities.map(act => {
-      if (act.id === advancingItem.id) {
-        let newStatus, newClass;
-        switch (act.status) {
-          case 'CUSTOMER INWARD':
-            newStatus = 'VENDOR OUTWARD';
-            newClass = 'bg-yellow-light';
-            break;
-          case 'VENDOR OUTWARD':
-            newStatus = 'VENDOR INWARD';
-            newClass = 'bg-purple-light';
-            break;
-          case 'VENDOR INWARD':
-            newStatus = 'CUSTOMER OUTWARD';
-            newClass = 'bg-green-light';
-            break;
-          default:
-            return act;
-        }
-        let formattedDate = act.date;
-        if (advanceDate) {
-          const [year, month, day] = advanceDate.split('-');
-          formattedDate = `${day}/${month}/${year}`;
-        }
-        updatedItem = { ...act, status: newStatus, statusClass: newClass, date: formattedDate };
-        if (newSerialNumber) {
-          updatedItem.oldSerialNumber = act.serialNumber;
-          updatedItem.serialNumber = newSerialNumber;
-        }
-        if (courierCharge) {
-          updatedItem.courierCharge = courierCharge;
-        }
-        if (shippingImagePreview) {
-          if (act.status === 'VENDOR OUTWARD') {
-            updatedItem.outwardImageURL = shippingImagePreview;
-          } else if (act.status === 'VENDOR INWARD') {
-            updatedItem.vendorInwardImageURL = shippingImagePreview;
-          }
-        }
-        return updatedItem;
+    let updatedItem = { ...advancingItem, status: newStatus, statusClass: newClass, date: formattedDate };
+    
+    const updateData = {
+      status: newStatus,
+      date: formattedDate
+    };
+
+    if (newSerialNumber) {
+      updatedItem.oldSerialNumber = advancingItem.serialNumber;
+      updatedItem.serialNumber = newSerialNumber;
+      updateData.serialNumber = newSerialNumber;
+      updateData.oldSerialNumber = advancingItem.serialNumber;
+    }
+    if (courierCharge) {
+      updatedItem.courierCharge = courierCharge;
+      updateData.courierCharge = courierCharge;
+    }
+    if (shippingImagePreview) {
+      if (advancingItem.status === 'VENDOR OUTWARD') {
+        updatedItem.outwardImageURL = shippingImagePreview;
+        updateData.outwardImageURL = shippingImagePreview;
+      } else if (advancingItem.status === 'VENDOR INWARD') {
+        updatedItem.vendorInwardImageURL = shippingImagePreview;
+        updateData.vendorInwardImageURL = shippingImagePreview;
       }
-      return act;
-    }));
+    }
+
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    axios.put(`${baseUrl}/tickets/${advancingItem.id}/status`, updateData)
+      .then(() => {
+        fetchBackendData();
+      })
+      .catch(err => {
+        console.error("Failed to update status:", err);
+      });
 
     // Generate PDF and send WhatsApp ONLY if transitioning FROM CUSTOMER INWARD
     if (advancingItem.status === 'CUSTOMER INWARD') {
@@ -577,12 +574,10 @@ function App() {
     window.open(doc.output('bloburl'), '_blank');
     doc.save(`${item.rma}_Final_Report.pdf`);
 
-    setRecentActivities(activities => activities.map(act => {
-      if (act.id === item.id) {
-        return { ...act, status: 'COMPLETED' };
-      }
-      return act;
-    }));
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    axios.put(`${baseUrl}/tickets/${item.id}/status`, { status: 'COMPLETED', date: item.date })
+      .then(() => fetchBackendData())
+      .catch(err => console.error("Failed to mark completed:", err));
   };
 
   const handleExportData = () => {
@@ -624,10 +619,28 @@ function App() {
     setIsMobileMenuOpen(false); // Close drawer on navigation
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // Simulate login
-    setIsLoggedIn(true);
+    setLoginError('');
+    const email = e.target[0].value;
+    const password = e.target[1].value;
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const res = await axios.post(`${baseUrl}/auth/login`, { email, password });
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('userRole', res.data.user.role);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+      setUserRole(res.data.user.role);
+      setIsLoggedIn(true);
+      fetchBackendData();
+    } catch (err) {
+      if (err.response && err.response.data && err.response.data.error) {
+        setLoginError(err.response.data.error);
+      } else {
+        setLoginError("Login failed. Please check your credentials.");
+      }
+      console.error(err);
+    }
   };
 
   if (!isLoggedIn) {
@@ -644,6 +657,11 @@ function App() {
           </div>
 
           <form className="login-form" onSubmit={handleLogin}>
+            {loginError && (
+              <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '10px 14px', borderRadius: '6px', fontSize: '13px', marginBottom: '16px', border: '1px solid #f87171' }}>
+                {loginError}
+              </div>
+            )}
             <div className="login-input-group">
               <label>Email Address</label>
               <input type="email" className="login-input" placeholder="admin@rmaflow.com" required defaultValue="admin@rmaflow.com" />
@@ -651,7 +669,23 @@ function App() {
 
             <div className="login-input-group">
               <label>Password</label>
-              <input type="password" className="login-input" placeholder="••••••••" required defaultValue="password" />
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  className="login-input" 
+                  placeholder="••••••••" 
+                  required 
+                  defaultValue="admin123" 
+                  style={{ paddingRight: '40px' }}
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             <button type="submit" className="login-btn">Sign In</button>
@@ -746,7 +780,12 @@ function App() {
         </button>
 
         <div className="logout-btn-container">
-          <button className="logout-btn" onClick={() => setIsLoggedIn(false)}>
+          <button className="logout-btn" onClick={() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('userRole');
+            delete axios.defaults.headers.common['Authorization'];
+            setIsLoggedIn(false);
+          }}>
             <LogOut size={20} />
             <span>Sign Out</span>
           </button>
@@ -780,6 +819,7 @@ function App() {
               getTodayDate={getTodayDate}
               handleGenerateReport={handleGenerateReport}
               setViewingItem={setViewingItem}
+              userRole={userRole}
             />
           )}
 
@@ -796,6 +836,8 @@ function App() {
               setCategories={setCategories}
               newCategoryName={newCategoryName}
               setNewCategoryName={setNewCategoryName}
+              userRole={userRole}
+              fetchBackendData={fetchBackendData}
             />
           )}
 
@@ -805,6 +847,8 @@ function App() {
               setVendors={setVendors}
               newVendorName={newVendorName}
               setNewVendorName={setNewVendorName}
+              userRole={userRole}
+              fetchBackendData={fetchBackendData}
             />
           )}
 
@@ -859,27 +903,27 @@ function App() {
         setCourierCharge={setCourierCharge}
         getTodayDate={getTodayDate}
         handleGenerateReport={handleGenerateReport}
+        userRole={userRole}
         onSaveInlineService={(inlineData) => {
           const newId = Math.floor(Math.random() * 100).toString() + Date.now().toString().slice(-4);
           const today = new Date();
           const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
           
-          const newActivity = {
-            id: newId,
-            name: viewingItem.name,
+          const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+          axios.post(`${baseUrl}/tickets`, {
+            rma: viewingItem.rma,
+            customerName: viewingItem.name,
             contactNumber: viewingItem.contactNumber,
             email: viewingItem.email,
             product: inlineData.productName,
-            category: inlineData.category,
-            serviceVendor: inlineData.serviceVendor,
             serialNumber: inlineData.serialNumber,
-            rma: viewingItem.rma,
             status: "CUSTOMER INWARD",
             date: dateStr,
-            statusClass: "bg-blue-light",
+            category: inlineData.category,
+            serviceVendor: inlineData.serviceVendor,
             inwardImageURL: inlineData.image
-          };
-          setRecentActivities(prev => [newActivity, ...prev]);
+          }).then(() => fetchBackendData())
+          .catch(err => console.error("Failed to inline save:", err));
         }}
       />
 

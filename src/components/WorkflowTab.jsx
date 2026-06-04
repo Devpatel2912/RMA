@@ -6,7 +6,7 @@ export default function WorkflowTab({
   searchQuery, setSearchQuery,
   filteredWorkflowItems,
   setAdvancingItem, setAdvanceDate, setNewSerialNumber, setCourierCharge,
-  getTodayDate, handleGenerateReport, setViewingItem
+  getTodayDate, handleGenerateReport, setViewingItem, userRole
 }) {
   return (
     <>
@@ -101,32 +101,36 @@ export default function WorkflowTab({
                       <Eye size={20} />
                     </button>
                   ) : (
-                    mainItem.status !== 'CUSTOMER OUTWARD' && mainItem.status !== 'COMPLETED' ? (
-                      <button
-                        className="action-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setAdvancingItem(mainItem);
-                          setAdvanceDate(getTodayDate());
-                          setNewSerialNumber('');
-                          setCourierCharge('');
-                        }}
-                        title="Click to advance status"
-                      >
-                        <ArrowRightCircle size={20} />
-                      </button>
+                    userRole === 'ADMIN' ? (
+                      mainItem.status !== 'CUSTOMER OUTWARD' && mainItem.status !== 'COMPLETED' ? (
+                        <button
+                          className="action-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAdvancingItem(mainItem);
+                            setAdvanceDate(getTodayDate());
+                            setNewSerialNumber('');
+                            setCourierCharge('');
+                          }}
+                          title="Click to advance status"
+                        >
+                          <ArrowRightCircle size={20} />
+                        </button>
+                      ) : (
+                        <button
+                          className="action-btn"
+                          style={{ color: '#059669', backgroundColor: '#d1fae5' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleGenerateReport(mainItem);
+                          }}
+                          title="Generate Final Report & Send to WhatsApp"
+                        >
+                          <Share size={20} />
+                        </button>
+                      )
                     ) : (
-                      <button
-                        className="action-btn"
-                        style={{ color: '#059669', backgroundColor: '#d1fae5' }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleGenerateReport(mainItem);
-                        }}
-                        title="Generate Final Report & Send to WhatsApp"
-                      >
-                        <Share size={20} />
-                      </button>
+                      <span title="Action restricted to admin" style={{color: '#cbd5e1'}}>—</span>
                     )
                   )}
                 </td>

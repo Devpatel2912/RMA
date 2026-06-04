@@ -173,14 +173,22 @@
   }
 
   .activity-item {
-    flex-direction: column;
+    flex-wrap: wrap;
     align-items: flex-start;
     gap: 12px;
   }
 
   .activity-meta {
-    align-items: flex-start;
+    width: calc(100% - 56px);
     margin-left: 56px; /* align with text */
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+  }
+
+  .modal-overlay {
+    padding: 20px !important;
   }
 
   .card-header-row {
