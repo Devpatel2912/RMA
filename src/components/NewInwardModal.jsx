@@ -103,7 +103,7 @@ const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
 
 export default function NewInwardModal({ setIsModalOpen, formData, setFormData, handleInputChange, categories, vendors, handleSaveInward }) {
   return (
-    <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
+    <div className="modal-overlay">
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title-group">
@@ -118,7 +118,7 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
         <div className="modal-body">
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Customer Name</label>
+              <label className="form-label">Customer Name *</label>
               <input
                 type="text"
                 className="form-input"
@@ -129,20 +129,28 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Contact Number (WhatsApp Number)</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="+1 (555) 000-0000"
-                name="contactNumber"
-                value={formData.contactNumber}
-                onChange={handleInputChange}
-              />
+              <label className="form-label">Contact Number (WhatsApp Number) *</label>
+              <div style={{ display: 'flex', border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden' }}>
+                <span style={{ padding: '8px 12px', backgroundColor: '#f8fafc', color: '#64748b', borderRight: '1px solid #cbd5e1', fontWeight: 500, display: 'flex', alignItems: 'center' }}>+91</span>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="9876543210"
+                  name="contactNumber"
+                  maxLength="10"
+                  value={formData.contactNumber ? formData.contactNumber.replace(/^\+91\s*/, '') : ''}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    handleInputChange({ target: { name: 'contactNumber', value: val ? `+91 ${val}` : '' } });
+                  }}
+                  style={{ border: 'none', borderRadius: 0, outline: 'none', width: '100%', padding: '8px 12px', fontSize: '14px' }}
+                />
+              </div>
             </div>
           </div>
 
           <div className="form-group">
-            <label className="form-label">Product Name / Model</label>
+            <label className="form-label">Product Name / Model *</label>
             <input
               type="text"
               className="form-input"
@@ -155,7 +163,7 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Category</label>
+              <label className="form-label">Category *</label>
               <SearchableDropdown
                 options={categories}
                 value={formData.category}
@@ -164,7 +172,7 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Service Vendor</label>
+              <label className="form-label">Service Vendor *</label>
               <SearchableDropdown
                 options={vendors}
                 value={formData.serviceVendor}
@@ -176,7 +184,7 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Original Serial #</label>
+              <label className="form-label">Original Serial # (Optional)</label>
               <input
                 type="text"
                 className="form-input"
@@ -187,7 +195,7 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Email Address</label>
+              <label className="form-label">Email Address (Optional)</label>
               <input
                 type="email"
                 className="form-input"
@@ -201,18 +209,17 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Upload Image</label>
+              <label className="form-label">Upload Image *</label>
               <input
                 type="file"
                 className="form-input"
                 accept="image/*"
-                capture="environment"
                 onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.files[0] }))}
                 style={{ padding: '8px' }}
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Inward Date</label>
+              <label className="form-label">Inward Date *</label>
               <input
                 type="date"
                 className="form-input"
@@ -224,7 +231,7 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
           </div>
 
           <div className="form-group">
-            <label className="form-label">Problem Description</label>
+            <label className="form-label">Problem Description *</label>
             <textarea
               className="form-textarea"
               placeholder="Describe the issue reported by the customer..."

@@ -6,12 +6,13 @@ export default function AdvanceWorkflowModal({
   advanceDate, setAdvanceDate,
   newSerialNumber, setNewSerialNumber,
   courierCharge, setCourierCharge,
+  customMessage, setCustomMessage,
   confirmAdvanceStatus
 }) {
   if (!advancingItem) return null;
 
   return (
-    <div className="modal-overlay" onClick={() => { setAdvancingItem(null); setShippingImagePreview(null); }}>
+    <div className="modal-overlay">
       <div className="modal-content advance-modal" onClick={e => e.stopPropagation()}>
         <div className="advance-modal-header">
           <div className="print-only" style={{ marginBottom: '24px', textAlign: 'center', borderBottom: '2px solid #e2e8f0', paddingBottom: '16px' }}>
@@ -58,7 +59,7 @@ export default function AdvanceWorkflowModal({
                   </div>
                 </div>
               </div>
-              
+
               {advancingItem.inwardImageURL && (
                 <div style={{ marginBottom: '16px' }}>
                   <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Inward Image</span>
@@ -67,13 +68,12 @@ export default function AdvanceWorkflowModal({
               )}
 
               <div className="form-group" style={{ marginBottom: '16px' }}>
-                <label className="form-label">Upload Shipping Image</label>
-                <input 
-                  type="file" 
-                  className="form-input" 
-                  style={{ padding: '8px' }} 
+                <label className="form-label">Upload Docket Number</label>
+                <input
+                  type="file"
+                  className="form-input"
+                  style={{ padding: '8px' }}
                   accept="image/*"
-                  capture="environment"
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
@@ -94,9 +94,9 @@ export default function AdvanceWorkflowModal({
                 </div>
               )}
 
-              <button 
+              <button
                 type="button"
-                onClick={() => window.print()} 
+                onClick={() => window.print()}
                 style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#0f172a', fontWeight: 600, cursor: 'pointer', marginBottom: '16px' }}
               >
                 Print Ticket
@@ -108,7 +108,7 @@ export default function AdvanceWorkflowModal({
                 <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Product Name</span>
                 <span style={{ fontSize: '14px', color: '#0f172a', fontWeight: 500, display: 'block' }}>{advancingItem.product}</span>
               </div>
-              
+
               <div className="details-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                 <div className="detail-item">
                   <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Customer Name</span>
@@ -135,15 +135,14 @@ export default function AdvanceWorkflowModal({
                   <input type="date" className="form-input" style={{ padding: '8px', fontSize: '14px', width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px' }} value={advanceDate} onChange={(e) => setAdvanceDate(e.target.value)} />
                 </div>
               </div>
-              
+
               <div className="form-group" style={{ marginBottom: '16px' }}>
                 <label className="form-label" style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Upload Product Image</label>
-                <input 
-                  type="file" 
-                  className="form-input" 
-                  style={{ padding: '8px', fontSize: '14px', width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px' }} 
+                <input
+                  type="file"
+                  className="form-input"
+                  style={{ padding: '8px', fontSize: '14px', width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px' }}
                   accept="image/*"
-                  capture="environment"
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
@@ -164,9 +163,9 @@ export default function AdvanceWorkflowModal({
                 </div>
               )}
 
-              <button 
+              <button
                 type="button"
-                onClick={() => window.print()} 
+                onClick={() => window.print()}
                 style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#0f172a', fontWeight: 600, cursor: 'pointer', marginBottom: '16px' }}
               >
                 Print Ticket
@@ -199,10 +198,14 @@ export default function AdvanceWorkflowModal({
                   <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Transition Date</span>
                   <input type="date" className="form-input" style={{ padding: '6px', fontSize: '14px', border: '1px solid #e2e8f0', borderRadius: '4px' }} value={advanceDate} onChange={(e) => setAdvanceDate(e.target.value)} />
                 </div>
+                <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Message to Customer (Optional)</label>
+                  <textarea className="form-textarea" style={{ padding: '8px', fontSize: '14px', width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px' }} placeholder="Type a message to send along with the PDF via WhatsApp..." value={customMessage} onChange={(e) => setCustomMessage(e.target.value)} rows="3"></textarea>
+                </div>
               </div>
-              <button 
+              <button
                 type="button"
-                onClick={() => window.print()} 
+                onClick={() => window.print()}
                 style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#0f172a', fontWeight: 600, cursor: 'pointer', marginTop: '16px' }}
               >
                 Print Ticket

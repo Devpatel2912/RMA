@@ -164,7 +164,7 @@ export default function ManageVendorsTab({ vendors, setVendors, userRole, fetchB
       </div>
 
       {isModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
+        <div className="modal-overlay">
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
             <div className="modal-header">
               <div className="modal-title-group">
@@ -191,8 +191,23 @@ export default function ManageVendorsTab({ vendors, setVendors, userRole, fetchB
               </div>
               <div className="form-row" style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">Phone Number</label>
-                  <input type="text" className="form-input" name="phoneNumber" value={formData.phoneNumber} onChange={handleInputChange} placeholder="+1 234 567 890" />
+                  <label className="form-label">Phone Number (WhatsApp Number)</label>
+                  <div style={{ display: 'flex', border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden' }}>
+                    <span style={{ padding: '8px 12px', backgroundColor: '#f8fafc', color: '#64748b', borderRight: '1px solid #cbd5e1', fontWeight: 500, display: 'flex', alignItems: 'center' }}>+91</span>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="9876543210"
+                      name="phoneNumber"
+                      maxLength="10"
+                      value={formData.phoneNumber ? formData.phoneNumber.replace(/^\+91\s*/, '') : ''}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        handleInputChange({ target: { name: 'phoneNumber', value: val ? `+91 ${val}` : '' } });
+                      }}
+                      style={{ border: 'none', borderRadius: 0, outline: 'none', width: '100%', padding: '8px 12px', fontSize: '14px' }}
+                    />
+                  </div>
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
                   <label className="form-label">Email</label>

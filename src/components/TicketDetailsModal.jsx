@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Plus, Eye, Save, Upload, ChevronDown, Search, ArrowRightCircle, Share } from 'lucide-react';
+import { X, Plus, Eye, Save, Upload, ChevronDown, Search, ArrowRightCircle, Share, Edit2, Trash2 } from 'lucide-react';
+import axios from 'axios';
 
 const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -67,9 +68,8 @@ const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
 
 export default function TicketDetailsModal({ 
   viewingItem, setViewingItem, recentActivities, categories, vendors, onSaveInlineService,
-  setAdvancingItem, setAdvanceDate, setNewSerialNumber, setCourierCharge, getTodayDate, handleGenerateReport, userRole
+  setAdvancingItem, setAdvanceDate, setNewSerialNumber, setCourierCharge, getTodayDate, handleGenerateReport, userRole, fetchBackendData
 }) {
-  const [isAddingService, setIsAddingService] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [inlineData, setInlineData] = useState({
     productName: '',
@@ -79,6 +79,42 @@ export default function TicketDetailsModal({
     image: null,
     imageName: ''
   });
+
+  const [editingServiceId, setEditingServiceId] = useState(null);
+  const [editData, setEditData] = useState({});
+
+  const handleDeleteService = async (serviceId) => {
+    if (!window.confirm("Are you sure you want to delete this service?")) return;
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      await axios.delete(`${baseUrl}/tickets/${serviceId}`);
+      if (fetchBackendData) fetchBackendData();
+    } catch (err) {
+      console.error("Failed to delete service:", err);
+      alert("Failed to delete service.");
+    }
+  };
+
+  const handleUpdateService = async (serviceId) => {
+    try {
+      if (!editData.productName || !editData.category || !editData.serviceVendor) {
+        alert("Please fill required fields: Product, Category, Vendor");
+        return;
+      }
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      await axios.put(`${baseUrl}/tickets/${serviceId}`, {
+        product: editData.productName,
+        category: editData.category,
+        serviceVendor: editData.serviceVendor,
+        serialNumber: editData.serialNumber
+      });
+      setEditingServiceId(null);
+      if (fetchBackendData) fetchBackendData();
+    } catch (err) {
+      console.error("Failed to update service:", err);
+      alert("Failed to update service.");
+    }
+  };
 
   if (!viewingItem) return null;
 
@@ -111,7 +147,7 @@ export default function TicketDetailsModal({
     }
     
     // Reset and close
-    setIsAddingService(false);
+
     setInlineData({
       productName: '',
       category: categories ? categories[0] : '',
@@ -123,7 +159,7 @@ export default function TicketDetailsModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={() => { if (!previewImage) setViewingItem(null); }}>
+    <div className="modal-overlay">
       <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '1200px', width: '90%', padding: '32px' }}>
         
         {/* Main Modal Header */}
@@ -157,14 +193,6 @@ export default function TicketDetailsModal({
         <div style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#0f172a' }}>Services / Products ({ticketServices.length})</h3>
-            {!isAddingService && (
-              <button 
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#3b82f6', color: 'white', padding: '8px 12px', borderRadius: '6px', border: 'none', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }} 
-                onClick={() => setIsAddingService(true)}
-              >
-                <Plus size={16} /> Add Service
-              </button>
-            )}
           </div>
 
           <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'visible' }}>
@@ -181,24 +209,77 @@ export default function TicketDetailsModal({
               </thead>
               <tbody>
                 {ticketServices.map((service, index) => (
-                  <tr key={service.id} style={{ borderBottom: index < ticketServices.length - 1 || isAddingService ? '1px solid #e2e8f0' : 'none' }}>
-                    <td style={{ padding: '16px', fontWeight: 500, color: '#0f172a' }}>{service.product}</td>
-                    <td style={{ padding: '16px', color: '#475569' }}>{service.category}</td>
-                    <td style={{ padding: '16px', color: '#475569' }}>{service.serviceVendor}</td>
-                    <td style={{ padding: '16px', color: '#475569' }}>{service.serialNumber}</td>
-                    <td style={{ padding: '16px', textAlign: 'center' }}>
-                      {service.inwardImageURL ? (
-                        <button 
-                          onClick={() => setPreviewImage(service.inwardImageURL)}
-                          style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px' }}
-                          title="View Original Image"
-                        >
-                          <Eye size={18} />
-                        </button>
-                      ) : (
+                  editingServiceId === service.id ? (
+                    <tr key={service.id} style={{ backgroundColor: '#fffbeb', borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '12px 8px' }}>
+                        <input 
+                          type="text" 
+                          value={editData.productName} 
+                          onChange={(e) => setEditData({...editData, productName: e.target.value})}
+                          style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
+                        />
+                      </td>
+                      <td style={{ padding: '12px 8px' }}>
+                        <SearchableDropdown 
+                          options={categories} 
+                          value={editData.category} 
+                          onChange={(val) => setEditData({...editData, category: val})} 
+                        />
+                      </td>
+                      <td style={{ padding: '12px 8px' }}>
+                        <SearchableDropdown 
+                          options={vendors} 
+                          value={editData.serviceVendor} 
+                          onChange={(val) => setEditData({...editData, serviceVendor: val})} 
+                        />
+                      </td>
+                      <td style={{ padding: '12px 8px' }}>
+                        <input 
+                          type="text" 
+                          value={editData.serialNumber} 
+                          onChange={(e) => setEditData({...editData, serialNumber: e.target.value})}
+                          style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
+                        />
+                      </td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center' }}>
                         <span style={{ color: '#cbd5e1' }}>—</span>
-                      )}
-                    </td>
+                      </td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                          <button 
+                            onClick={() => handleUpdateService(service.id)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#10b981', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
+                          >
+                            <Save size={14} /> Save
+                          </button>
+                          <button 
+                            onClick={() => setEditingServiceId(null)}
+                            style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={service.id} style={{ borderBottom: index < ticketServices.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
+                      <td style={{ padding: '16px', fontWeight: 500, color: '#0f172a' }}>{service.product}</td>
+                      <td style={{ padding: '16px', color: '#475569' }}>{service.category}</td>
+                      <td style={{ padding: '16px', color: '#475569' }}>{service.serviceVendor}</td>
+                      <td style={{ padding: '16px', color: '#475569' }}>{service.serialNumber}</td>
+                      <td style={{ padding: '16px', textAlign: 'center' }}>
+                        {service.inwardImageURL ? (
+                          <button 
+                            onClick={() => setPreviewImage(service.inwardImageURL)}
+                            style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px' }}
+                            title="View Original Image"
+                          >
+                            <Eye size={18} />
+                          </button>
+                        ) : (
+                          <span style={{ color: '#cbd5e1' }}>—</span>
+                        )}
+                      </td>
                     <td style={{ padding: '16px', textAlign: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                         <span className={`status-badge ${service.statusClass}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
@@ -206,116 +287,74 @@ export default function TicketDetailsModal({
                         </span>
                         
                         {userRole === 'ADMIN' ? (
-                          service.status !== 'CUSTOMER OUTWARD' && service.status !== 'COMPLETED' ? (
+                          <>
+                            {service.status !== 'CUSTOMER OUTWARD' && service.status !== 'COMPLETED' ? (
+                              <button
+                                className="action-btn"
+                                style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px' }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAdvancingItem(service);
+                                  setAdvanceDate(getTodayDate());
+                                  setNewSerialNumber('');
+                                  setCourierCharge('');
+                                }}
+                                title="Click to advance status"
+                              >
+                                <ArrowRightCircle size={18} />
+                              </button>
+                            ) : (
+                              <button
+                                className="action-btn"
+                                style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', padding: '4px' }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleGenerateReport(service);
+                                }}
+                                title="Generate Final Report & Send to WhatsApp"
+                              >
+                                <Share size={18} />
+                              </button>
+                            )}
                             <button
                               className="action-btn"
-                              style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px' }}
+                              style={{ background: 'none', border: 'none', color: '#eab308', cursor: 'pointer', padding: '4px' }}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setAdvancingItem(service);
-                                setAdvanceDate(getTodayDate());
-                                setNewSerialNumber('');
-                                setCourierCharge('');
+                                setEditingServiceId(service.id);
+                                setEditData({
+                                  productName: service.product,
+                                  category: service.category,
+                                  serviceVendor: service.serviceVendor,
+                                  serialNumber: service.serialNumber || ''
+                                });
                               }}
-                              title="Click to advance status"
+                              title="Edit Service"
                             >
-                              <ArrowRightCircle size={18} />
+                              <Edit2 size={16} />
                             </button>
-                          ) : (
                             <button
                               className="action-btn"
-                              style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', padding: '4px' }}
+                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleGenerateReport(service);
+                                handleDeleteService(service.id);
                               }}
-                              title="Generate Final Report & Send to WhatsApp"
+                              title="Delete Service"
                             >
-                              <Share size={18} />
+                              <Trash2 size={16} />
                             </button>
-                          )
+                          </>
                         ) : (
                           <span title="Action restricted to admin" style={{color: '#cbd5e1'}}>—</span>
                         )}
                       </div>
                     </td>
                   </tr>
+                )
                 ))}
 
-                {/* Inline Editing Row (Excel-like) */}
-                {isAddingService && (
-                  <tr style={{ backgroundColor: '#f0fdf4' }}>
-                    <td style={{ padding: '12px 8px' }}>
-                      <input 
-                        type="text" 
-                        placeholder="Enter Product..."
-                        value={inlineData.productName}
-                        onChange={e => setInlineData({...inlineData, productName: e.target.value})}
-                        style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none' }}
-                        autoFocus
-                      />
-                    </td>
-                    <td style={{ padding: '12px 8px' }}>
-                      <SearchableDropdown
-                        options={categories}
-                        value={inlineData.category}
-                        onChange={val => setInlineData({...inlineData, category: val})}
-                        placeholder="Select Category"
-                      />
-                    </td>
-                    <td style={{ padding: '12px 8px' }}>
-                      <SearchableDropdown
-                        options={vendors}
-                        value={inlineData.serviceVendor}
-                        onChange={val => setInlineData({...inlineData, serviceVendor: val})}
-                        placeholder="Select Vendor"
-                      />
-                    </td>
-                    <td style={{ padding: '12px 8px' }}>
-                      <input 
-                        type="text" 
-                        placeholder="Serial # (Optional)"
-                        value={inlineData.serialNumber}
-                        onChange={e => setInlineData({...inlineData, serialNumber: e.target.value})}
-                        style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none' }}
-                      />
-                    </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', cursor: 'pointer', color: '#3b82f6', fontSize: '13px', fontWeight: 500 }}>
-                          <Upload size={16} />
-                          {inlineData.imageName ? (inlineData.imageName.length > 10 ? inlineData.imageName.substring(0, 10) + '...' : inlineData.imageName) : 'Upload'}
-                          <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleInlineImageChange} />
-                        </label>
-                        {inlineData.image && (
-                          <button 
-                            onClick={() => setPreviewImage(inlineData.image)}
-                            style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', padding: '0', display: 'flex' }}
-                            title="Preview Selected Image"
-                          >
-                            <Eye size={18} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        <button 
-                          onClick={handleSaveInline}
-                          style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#10b981', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}
-                        >
-                          <Save size={14} /> Save
-                        </button>
-                        <button 
-                          onClick={() => setIsAddingService(false)}
-                          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }}
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )}
+
               </tbody>
             </table>
           </div>

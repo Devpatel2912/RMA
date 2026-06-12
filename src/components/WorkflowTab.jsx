@@ -4,6 +4,8 @@ import { Search, ArrowRightCircle, Share, Eye } from 'lucide-react';
 export default function WorkflowTab({
   workflowFilter, setWorkflowFilter,
   searchQuery, setSearchQuery,
+  filterMonth, setFilterMonth,
+  filterYear, setFilterYear,
   filteredWorkflowItems,
   setAdvancingItem, setAdvanceDate, setNewSerialNumber, setCourierCharge,
   getTodayDate, handleGenerateReport, setViewingItem, userRole
@@ -16,6 +18,29 @@ export default function WorkflowTab({
         </div>
 
         <div className="workflow-controls">
+          <select
+            className="filter-dropdown"
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(e.target.value)}
+            style={{ width: '120px' }}
+          >
+            <option value="All">All Months</option>
+            {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map(m => (
+              <option key={m} value={m}>{new Date(2000, parseInt(m) - 1, 1).toLocaleString('default', { month: 'short' })}</option>
+            ))}
+          </select>
+          <select
+            className="filter-dropdown"
+            value={filterYear}
+            onChange={(e) => setFilterYear(e.target.value)}
+            style={{ width: '100px' }}
+          >
+            <option value="All">All Years</option>
+            {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => (
+              <option key={y} value={y.toString()}>{y}</option>
+            ))}
+          </select>
+
           <select
             className="filter-dropdown"
             value={workflowFilter}

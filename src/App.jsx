@@ -12,7 +12,8 @@ import {
   Menu,
   Printer,
   Eye,
-  EyeOff
+  EyeOff,
+  Smartphone
 } from 'lucide-react';
 import './index.css';
 import './modal.css';
@@ -24,13 +25,14 @@ import './mobile.css';
 
 import DashboardTab from './components/DashboardTab';
 import WorkflowTab from './components/WorkflowTab';
-import LedgersTab from './components/LedgersTab';
+
 import ManageCategoriesTab from './components/ManageCategoriesTab';
 import ManageVendorsTab from './components/ManageVendorsTab';
 import NewInwardModal from './components/NewInwardModal';
 import AdvanceWorkflowModal from './components/AdvanceWorkflowModal';
 import TicketDetailsModal from './components/TicketDetailsModal';
 import PrintReportsTab from './components/PrintReportsTab';
+import WhatsAppSettings from './components/WhatsAppSettings';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
@@ -50,8 +52,11 @@ function App() {
   const [advanceDate, setAdvanceDate] = useState('');
   const [newSerialNumber, setNewSerialNumber] = useState('');
   const [courierCharge, setCourierCharge] = useState('');
+  const [customMessage, setCustomMessage] = useState('');
   const [workflowFilter, setWorkflowFilter] = useState('All Items');
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterMonth, setFilterMonth] = useState('All');
+  const [filterYear, setFilterYear] = useState('All');
 
   const [categories, setCategories] = useState([]);
   const [vendors, setVendors] = useState([]);
@@ -64,8 +69,8 @@ function App() {
     contactNumber: '',
     email: '',
     productName: '',
-    category: 'Motherboard',
-    serviceVendor: 'ASUS Service',
+    category: '',
+    serviceVendor: '',
     serialNumber: '',
     description: '',
     image: null,
@@ -83,7 +88,7 @@ function App() {
       const catRes = await axios.get(`${baseUrl}/categories`);
       setCategories(catRes.data.map(c => c.name));
       const venRes = await axios.get(`${baseUrl}/vendors`);
-      setVendors(venRes.data);
+      setVendors(venRes.data.map(v => v.companyName));
       const ticRes = await axios.get(`${baseUrl}/tickets`);
       setRecentActivities(ticRes.data);
     } catch (e) {
@@ -141,8 +146,8 @@ function App() {
   };
 
   const handleSaveInward = () => {
-    if (!formData.customerName || !formData.contactNumber || !formData.productName || !formData.category || !formData.serviceVendor || !formData.serialNumber || !formData.description || !formData.inwardDate) {
-      alert("Please fill out all required fields. Email and Image are optional.");
+    if (!formData.customerName || !formData.contactNumber || !formData.productName || !formData.category || !formData.serviceVendor || !formData.description || !formData.inwardDate || !formData.image) {
+      alert("Please fill out all required fields. Serial Number and Email are optional.");
       return;
     }
 
@@ -175,80 +180,6 @@ function App() {
         inwardImageURL: imgData
       };
 
-      const doc = new jsPDF();
-      doc.setFillColor(15, 23, 42);
-      doc.rect(0, 0, 210, 40, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(28);
-      doc.setFont("helvetica", "bold");
-      doc.text("RMA Flow", 20, 22);
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "normal");
-      doc.text("CUSTOMER INWARD TICKET", 20, 32);
-      doc.setFont("helvetica", "bold");
-      doc.text(`TICKET #: ${newRma}`, 140, 27);
-      
-      let yPos = 60;
-      const drawField = (label, value, x, y) => {
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(100, 116, 139);
-        doc.text(label.toUpperCase(), x, y);
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(15, 23, 42);
-        const textVal = value ? value.toString() : "N/A";
-        const splitVal = doc.splitTextToSize(textVal, 80);
-        doc.text(splitVal, x, y + 6);
-        return splitVal.length * 6;
-      };
-      
-      drawField("Customer Name", formData.customerName, 20, yPos);
-      drawField("Contact Number", formData.contactNumber, 110, yPos);
-      yPos += 20;
-      drawField("Email Address", formData.email, 20, yPos);
-      drawField("Inward Date", dateStr, 110, yPos);
-      yPos += 20;
-      doc.setDrawColor(226, 232, 240);
-      doc.line(20, yPos, 190, yPos);
-      yPos += 15;
-      drawField("Product Model", formData.productName, 20, yPos);
-      drawField("Category", formData.category, 110, yPos);
-      yPos += 20;
-      drawField("Service Vendor", formData.serviceVendor, 20, yPos);
-      drawField("Serial Number", formData.serialNumber, 110, yPos);
-      yPos += 20;
-      
-      if (formData.description) {
-        doc.line(20, yPos, 190, yPos);
-        yPos += 15;
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(100, 116, 139);
-        doc.text("PROBLEM DESCRIPTION", 20, yPos);
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(15, 23, 42);
-        const splitDesc = doc.splitTextToSize(formData.description, 170);
-        doc.text(splitDesc, 20, yPos + 6);
-        yPos += (splitDesc.length * 6) + 15;
-      }
-      
-      if (imgData) {
-        try {
-          doc.setFontSize(10);
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(100, 116, 139);
-          doc.text("ATTACHED IMAGE", 20, yPos);
-          yPos += 5;
-          doc.addImage(imgData, 'JPEG', 20, yPos, 100, 100, undefined, 'FAST');
-        } catch(e) {
-          console.error("Failed to add image to PDF", e);
-        }
-      }
-      
-      window.open(doc.output('bloburl'), '_blank');
-      doc.save(`${newRma}_Inward_Ticket.pdf`);
 
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
       axios.post(`${baseUrl}/tickets`, {
@@ -362,22 +293,10 @@ function App() {
     // Generate PDF and send WhatsApp ONLY if transitioning FROM CUSTOMER INWARD
     if (advancingItem.status === 'CUSTOMER INWARD') {
       const itemToSend = updatedItem || advancingItem;
-      let whatsappMessage = `*New RMA Inward Entry*\n\n`;
-      whatsappMessage += `*Ticket #:* ${itemToSend.rma}\n`;
-      whatsappMessage += `*Customer Name:* ${itemToSend.name}\n`;
-      whatsappMessage += `*Contact:* ${itemToSend.contactNumber}\n`;
-      if (itemToSend.email) whatsappMessage += `*Email:* ${itemToSend.email}\n`;
-      whatsappMessage += `*Product:* ${itemToSend.product}\n`;
-      whatsappMessage += `*Category:* ${itemToSend.category}\n`;
-      whatsappMessage += `*Vendor:* ${itemToSend.serviceVendor}\n`;
-      if (itemToSend.serialNumber) whatsappMessage += `*Serial #:* ${itemToSend.serialNumber}\n`;
-      whatsappMessage += `*Date:* ${itemToSend.date}\n`;
-      whatsappMessage += `\n*Note:* Please manually attach the downloaded PDF.`;
-
-      const phoneNum = itemToSend.contactNumber.replace(/[\s\-\(\)\+]/g, '');
-      if (phoneNum) {
-        window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
-      }
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      axios.post(`${baseUrl}/whatsapp/send-pdf`, { ticketData: itemToSend, message: customMessage })
+        .then(res => console.log("WhatsApp PDF Sent:", res.data))
+        .catch(err => console.error("Failed to send WhatsApp PDF:", err));
 
       const doc = new jsPDF();
       doc.setFillColor(15, 23, 42);
@@ -436,6 +355,18 @@ function App() {
         }
       }
       doc.save(`${itemToSend.rma}_Inward_Ticket.pdf`);
+    } else if (advancingItem.status === 'VENDOR INWARD') {
+      // Send text message to the vendor
+      const vendorObj = vendors.find(v => v.companyName === advancingItem.serviceVendor);
+      if (vendorObj && vendorObj.phoneNumber) {
+        const vendorText = `*RMA Ticket Update*\nProduct: ${advancingItem.product}\nCustomer: ${advancingItem.name}\nCategory: ${advancingItem.category}\nOld Serial Number: ${advancingItem.serialNumber || 'N/A'}\nNew Serial Number: ${newSerialNumber || 'N/A'}\nCourier Charge: ${courierCharge || 'N/A'}\nTransition Date: ${formattedDate}`;
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+        axios.post(`${baseUrl}/whatsapp/send-text`, { vendorPhone: vendorObj.phoneNumber, text: vendorText })
+          .then(res => console.log("Vendor WhatsApp Text Sent:", res.data))
+          .catch(err => console.error("Failed to send Vendor WhatsApp text:", err));
+      } else {
+        console.warn("Vendor phone number not found for:", advancingItem.serviceVendor);
+      }
     }
 
     setAdvancingItem(null);
@@ -443,85 +374,48 @@ function App() {
   };
 
   const handleGenerateReport = (item) => {
-    // Format WhatsApp Message
-    let whatsappMessage = `*RMA Final Report*\n\n`;
-    whatsappMessage += `*Ticket #:* ${item.rma}\n`;
-    whatsappMessage += `*Customer Name:* ${item.name}\n`;
-    whatsappMessage += `*Contact:* ${item.contactNumber}\n`;
-    if (item.email) whatsappMessage += `*Email:* ${item.email}\n`;
-    whatsappMessage += `*Product:* ${item.product}\n`;
-    whatsappMessage += `*Category:* ${item.category}\n`;
-    whatsappMessage += `*Vendor:* ${item.serviceVendor}\n`;
-    whatsappMessage += `*Final Serial #:* ${item.serialNumber}\n`;
-    if (item.oldSerialNumber) whatsappMessage += `*Old Serial #:* ${item.oldSerialNumber}\n`;
-    if (item.courierCharge) whatsappMessage += `*Courier Charge:* ${item.courierCharge}\n`;
-    whatsappMessage += `*Completion Date:* ${item.date}\n`;
-    whatsappMessage += `\n*Note:* Please manually attach the downloaded PDF report.`;
-
-    const phoneNum = item.contactNumber.replace(/[\s\-\(\)\+]/g, '');
-    if (phoneNum) {
-      window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
-    }
-
     const doc = new jsPDF();
-    
-    // Header background
-    doc.setFillColor(15, 23, 42); // #0f172a
+    doc.setFillColor(15, 23, 42);
     doc.rect(0, 0, 210, 40, 'F');
-    
-    // Header text
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(28);
     doc.setFont("helvetica", "bold");
     doc.text("RMA Flow", 20, 22);
-    
     doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
-    doc.text("FINAL RESOLUTION TICKET", 20, 32);
-
+    doc.text("FINAL REPORT", 20, 32);
     doc.setFont("helvetica", "bold");
     doc.text(`TICKET #: ${item.rma}`, 140, 27);
     
     let yPos = 60;
-    
     const drawField = (label, value, x, y) => {
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(100, 116, 139); // slate-500
+      doc.setTextColor(100, 116, 139);
       doc.text(label.toUpperCase(), x, y);
-      
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(15, 23, 42); // slate-900
+      doc.setTextColor(15, 23, 42);
       const textVal = value ? value.toString() : "N/A";
       const splitVal = doc.splitTextToSize(textVal, 80);
       doc.text(splitVal, x, y + 6);
       return splitVal.length * 6;
     };
-
+    
     drawField("Customer Name", item.name, 20, yPos);
     drawField("Contact Number", item.contactNumber, 110, yPos);
     yPos += 20;
-    
     drawField("Email Address", item.email, 20, yPos);
     drawField("Completion Date", item.date, 110, yPos);
     yPos += 20;
-    
-    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.setDrawColor(226, 232, 240);
     doc.line(20, yPos, 190, yPos);
     yPos += 15;
-
     drawField("Product Model", item.product, 20, yPos);
     drawField("Category", item.category, 110, yPos);
     yPos += 20;
-
     drawField("Service Vendor", item.serviceVendor, 20, yPos);
-    drawField("Courier Charge", item.courierCharge, 110, yPos);
     yPos += 20;
-
-    doc.line(20, yPos, 190, yPos);
-    yPos += 15;
-    
     drawField("Original Serial #", item.oldSerialNumber || item.serialNumber, 20, yPos);
     drawField("New Replacement Serial #", item.serialNumber, 110, yPos);
     yPos += 30;
@@ -575,8 +469,20 @@ function App() {
     doc.save(`${item.rma}_Final_Report.pdf`);
 
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-    axios.put(`${baseUrl}/tickets/${item.id}/status`, { status: 'COMPLETED', date: item.date })
-      .then(() => fetchBackendData())
+    
+    // Mark as completed
+    axios.put(`${baseUrl}/tickets/${item.id}/status`, { status: 'COMPLETED', date: getTodayDate() })
+      .then(() => {
+        fetchBackendData();
+        // After successfully marking completed, send WhatsApp to customer
+        const payloadItem = { ...item, customerName: item.name };
+        axios.post(`${baseUrl}/whatsapp/send-pdf`, { 
+          ticketData: payloadItem, 
+          message: `Hello ${item.name}, your RMA ticket (${item.rma}) has been completed. Please find your final replacement report attached.` 
+        })
+          .then(res => console.log("Final Report WhatsApp Sent:", res.data))
+          .catch(err => console.error("Failed to send WhatsApp Final Report:", err));
+      })
       .catch(err => console.error("Failed to mark completed:", err));
   };
 
@@ -699,8 +605,23 @@ function App() {
     const matchesFilter = workflowFilter === 'All Items' || item.status === workflowFilter.toUpperCase();
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.rma.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.serialNumber.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
+      (item.serialNumber && item.serialNumber.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+    let matchesMonth = true;
+    let matchesYear = true;
+    
+    if (item.date) {
+      const [day, month, year] = item.date.split('/');
+      if (filterMonth !== 'All' && filterMonth !== month) matchesMonth = false;
+      if (filterYear !== 'All' && filterYear !== year) matchesYear = false;
+    } else {
+      if (filterMonth !== 'All' || filterYear !== 'All') {
+        matchesMonth = false;
+        matchesYear = false;
+      }
+    }
+
+    return matchesFilter && matchesSearch && matchesMonth && matchesYear;
   });
 
   return (
@@ -744,13 +665,7 @@ function App() {
             <Workflow size={20} />
             <span>Workflow</span>
           </div>
-          <div
-            className={`nav-item ${activeTab === 'ledgers' ? 'active' : ''}`}
-            onClick={() => handleTabChange('ledgers')}
-          >
-            <BookOpen size={20} />
-            <span>Ledgers</span>
-          </div>
+
           <div
             className={`nav-item ${activeTab === 'categories' ? 'active' : ''}`}
             onClick={() => handleTabChange('categories')}
@@ -772,9 +687,34 @@ function App() {
             <Printer size={20} />
             <span>Reports</span>
           </div>
+          {userRole === 'ADMIN' && (
+            <div
+              className={`nav-item ${activeTab === 'whatsapp' ? 'active' : ''}`}
+              onClick={() => handleTabChange('whatsapp')}
+            >
+              <Smartphone size={20} />
+              <span>WhatsApp Setup</span>
+            </div>
+          )}
         </div>
 
-        <button className="new-inward-btn" onClick={() => { setIsModalOpen(true); setIsMobileMenuOpen(false); }}>
+        <button className="new-inward-btn" onClick={() => { 
+          setFormData({
+            customerName: '',
+            contactNumber: '',
+            email: '',
+            productName: '',
+            category: '',
+            serviceVendor: '',
+            serialNumber: '',
+            description: '',
+            image: null,
+            inwardDate: getTodayDate(),
+            rma: null
+          });
+          setIsModalOpen(true); 
+          setIsMobileMenuOpen(false); 
+        }}>
           <Plus size={20} />
           <span>New Inward</span>
         </button>
@@ -807,10 +747,14 @@ function App() {
 
           {activeTab === 'workflow' && (
             <WorkflowTab 
-              workflowFilter={workflowFilter}
+              workflowFilter={workflowFilter} 
               setWorkflowFilter={setWorkflowFilter}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
+              filterMonth={filterMonth}
+              setFilterMonth={setFilterMonth}
+              filterYear={filterYear}
+              setFilterYear={setFilterYear}
               filteredWorkflowItems={filteredWorkflowItems}
               setAdvancingItem={setAdvancingItem}
               setAdvanceDate={setAdvanceDate}
@@ -820,13 +764,6 @@ function App() {
               handleGenerateReport={handleGenerateReport}
               setViewingItem={setViewingItem}
               userRole={userRole}
-            />
-          )}
-
-          {activeTab === 'ledgers' && (
-            <LedgersTab 
-              recentActivities={recentActivities}
-              setViewingItem={setViewingItem}
             />
           )}
 
@@ -854,6 +791,10 @@ function App() {
 
           {activeTab === 'print' && (
             <PrintReportsTab recentActivities={recentActivities} />
+          )}
+
+          {activeTab === 'whatsapp' && (
+            <WhatsAppSettings />
           )}
         </div>
 
@@ -904,27 +845,8 @@ function App() {
         getTodayDate={getTodayDate}
         handleGenerateReport={handleGenerateReport}
         userRole={userRole}
-        onSaveInlineService={(inlineData) => {
-          const newId = Math.floor(Math.random() * 100).toString() + Date.now().toString().slice(-4);
-          const today = new Date();
-          const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
-          
-          const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-          axios.post(`${baseUrl}/tickets`, {
-            rma: viewingItem.rma,
-            customerName: viewingItem.name,
-            contactNumber: viewingItem.contactNumber,
-            email: viewingItem.email,
-            product: inlineData.productName,
-            serialNumber: inlineData.serialNumber,
-            status: "CUSTOMER INWARD",
-            date: dateStr,
-            category: inlineData.category,
-            serviceVendor: inlineData.serviceVendor,
-            inwardImageURL: inlineData.image
-          }).then(() => fetchBackendData())
-          .catch(err => console.error("Failed to inline save:", err));
-        }}
+        fetchBackendData={fetchBackendData}
+
       />
 
       <AdvanceWorkflowModal
@@ -938,6 +860,8 @@ function App() {
         setNewSerialNumber={setNewSerialNumber}
         courierCharge={courierCharge}
         setCourierCharge={setCourierCharge}
+        customMessage={customMessage}
+        setCustomMessage={setCustomMessage}
         confirmAdvanceStatus={confirmAdvanceStatus}
       />
     </div>
