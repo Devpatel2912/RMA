@@ -118,8 +118,8 @@ export default function TicketDetailsModal({
 
   if (!viewingItem) return null;
 
-  // Get all services belonging to this RMA ticket
-  const ticketServices = recentActivities ? recentActivities.filter(item => item.rma === viewingItem.rma) : [viewingItem];
+  // Use viewingItem directly as there is only one product per ticket
+  const service = viewingItem;
 
   const handleInlineImageChange = (e) => {
     const file = e.target.files[0];
@@ -189,174 +189,163 @@ export default function TicketDetailsModal({
           </div>
         </div>
 
-        {/* Services Excel-like Table */}
+        {/* Product Details Box */}
         <div style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#0f172a' }}>Services / Products ({ticketServices.length})</h3>
-          </div>
-
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'visible' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-              <thead style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <tr style={{ color: '#64748b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Product Name</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Category</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Vendor</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Serial Number</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'center' }}>Image</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'center' }}>Stage / Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ticketServices.map((service, index) => (
-                  editingServiceId === service.id ? (
-                    <tr key={service.id} style={{ backgroundColor: '#fffbeb', borderBottom: '1px solid #e2e8f0' }}>
-                      <td style={{ padding: '12px 8px' }}>
-                        <input 
-                          type="text" 
-                          value={editData.productName} 
-                          onChange={(e) => setEditData({...editData, productName: e.target.value})}
-                          style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
-                        />
-                      </td>
-                      <td style={{ padding: '12px 8px' }}>
-                        <SearchableDropdown 
-                          options={categories} 
-                          value={editData.category} 
-                          onChange={(val) => setEditData({...editData, category: val})} 
-                        />
-                      </td>
-                      <td style={{ padding: '12px 8px' }}>
-                        <SearchableDropdown 
-                          options={vendors} 
-                          value={editData.serviceVendor} 
-                          onChange={(val) => setEditData({...editData, serviceVendor: val})} 
-                        />
-                      </td>
-                      <td style={{ padding: '12px 8px' }}>
-                        <input 
-                          type="text" 
-                          value={editData.serialNumber} 
-                          onChange={(e) => setEditData({...editData, serialNumber: e.target.value})}
-                          style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
-                        />
-                      </td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                        <span style={{ color: '#cbd5e1' }}>—</span>
-                      </td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                          <button 
-                            onClick={() => handleUpdateService(service.id)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#10b981', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
+          <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#0f172a', marginBottom: '16px' }}>Product Details</h3>
+          
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', backgroundColor: '#fff', position: 'relative' }}>
+            {editingServiceId === service.id ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, marginBottom: '4px', display: 'block' }}>Product Name</label>
+                  <input 
+                    type="text" 
+                    value={editData.productName} 
+                    onChange={(e) => setEditData({...editData, productName: e.target.value})}
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, marginBottom: '4px', display: 'block' }}>Category</label>
+                  <SearchableDropdown 
+                    options={categories} 
+                    value={editData.category} 
+                    onChange={(val) => setEditData({...editData, category: val})} 
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, marginBottom: '4px', display: 'block' }}>Vendor</label>
+                  <SearchableDropdown 
+                    options={vendors} 
+                    value={editData.serviceVendor} 
+                    onChange={(val) => setEditData({...editData, serviceVendor: val})} 
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, marginBottom: '4px', display: 'block' }}>Serial Number</label>
+                  <input 
+                    type="text" 
+                    value={editData.serialNumber} 
+                    onChange={(e) => setEditData({...editData, serialNumber: e.target.value})}
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+                  <button 
+                    onClick={() => handleUpdateService(service.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#10b981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 500, fontSize: '14px', cursor: 'pointer' }}
+                  >
+                    <Save size={16} /> Save
+                  </button>
+                  <button 
+                    onClick={() => setEditingServiceId(null)}
+                    style={{ background: '#f1f5f9', border: 'none', color: '#64748b', cursor: 'pointer', padding: '8px 16px', borderRadius: '6px', fontSize: '14px', fontWeight: 500 }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Product</div>
+                    <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: 500 }}>{service.product}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Category</div>
+                    <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: 500 }}>{service.category}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Vendor</div>
+                    <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: 500 }}>{service.serviceVendor}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Serial Number</div>
+                    <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: 500 }}>{service.serialNumber || 'N/A'}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Image</div>
+                    {service.inwardImageURL ? (
+                      <button 
+                        onClick={() => setPreviewImage(service.inwardImageURL)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: 0, fontSize: '14px', fontWeight: 500 }}
+                      >
+                        <Eye size={16} /> View Image
+                      </button>
+                    ) : (
+                      <span style={{ color: '#94a3b8', fontSize: '14px' }}>No Image</span>
+                    )}
+                  </div>
+                </div>
+                
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Current Stage</span>
+                    <span className={`status-badge ${service.statusClass}`} style={{ fontSize: '12px', padding: '4px 10px' }}>
+                      {service.status}
+                    </span>
+                  </div>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {userRole === 'ADMIN' ? (
+                      <>
+                        {service.status !== 'CUSTOMER OUTWARD' && service.status !== 'COMPLETED' ? (
+                          <button
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#eff6ff', color: '#3b82f6', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAdvancingItem(service);
+                              setAdvanceDate(getTodayDate());
+                              setNewSerialNumber('');
+                              setCourierCharge('');
+                            }}
                           >
-                            <Save size={14} /> Save
-                          </button>
-                          <button 
-                            onClick={() => setEditingServiceId(null)}
-                            style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }}
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    <tr key={service.id} style={{ borderBottom: index < ticketServices.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
-                      <td style={{ padding: '16px', fontWeight: 500, color: '#0f172a' }}>{service.product}</td>
-                      <td style={{ padding: '16px', color: '#475569' }}>{service.category}</td>
-                      <td style={{ padding: '16px', color: '#475569' }}>{service.serviceVendor}</td>
-                      <td style={{ padding: '16px', color: '#475569' }}>{service.serialNumber}</td>
-                      <td style={{ padding: '16px', textAlign: 'center' }}>
-                        {service.inwardImageURL ? (
-                          <button 
-                            onClick={() => setPreviewImage(service.inwardImageURL)}
-                            style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px' }}
-                            title="View Original Image"
-                          >
-                            <Eye size={18} />
+                            <ArrowRightCircle size={16} /> Advance Stage
                           </button>
                         ) : (
-                          <span style={{ color: '#cbd5e1' }}>—</span>
+                          <button
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleGenerateReport(service);
+                            }}
+                          >
+                            <Share size={16} /> Generate Final Report
+                          </button>
                         )}
-                      </td>
-                    <td style={{ padding: '16px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        <span className={`status-badge ${service.statusClass}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
-                          {service.status}
-                        </span>
-                        
-                        {userRole === 'ADMIN' ? (
-                          <>
-                            {service.status !== 'CUSTOMER OUTWARD' && service.status !== 'COMPLETED' ? (
-                              <button
-                                className="action-btn"
-                                style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px' }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setAdvancingItem(service);
-                                  setAdvanceDate(getTodayDate());
-                                  setNewSerialNumber('');
-                                  setCourierCharge('');
-                                }}
-                                title="Click to advance status"
-                              >
-                                <ArrowRightCircle size={18} />
-                              </button>
-                            ) : (
-                              <button
-                                className="action-btn"
-                                style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', padding: '4px' }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleGenerateReport(service);
-                                }}
-                                title="Generate Final Report & Send to WhatsApp"
-                              >
-                                <Share size={18} />
-                              </button>
-                            )}
-                            <button
-                              className="action-btn"
-                              style={{ background: 'none', border: 'none', color: '#eab308', cursor: 'pointer', padding: '4px' }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingServiceId(service.id);
-                                setEditData({
-                                  productName: service.product,
-                                  category: service.category,
-                                  serviceVendor: service.serviceVendor,
-                                  serialNumber: service.serialNumber || ''
-                                });
-                              }}
-                              title="Edit Service"
-                            >
-                              <Edit2 size={16} />
-                            </button>
-                            <button
-                              className="action-btn"
-                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteService(service.id);
-                              }}
-                              title="Delete Service"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </>
-                        ) : (
-                          <span title="Action restricted to admin" style={{color: '#cbd5e1'}}>—</span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )
-                ))}
-
-
-              </tbody>
-            </table>
+                        <button
+                          style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#fefce8', color: '#eab308', border: '1px solid #fef08a', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingServiceId(service.id);
+                            setEditData({
+                              productName: service.product,
+                              category: service.category,
+                              serviceVendor: service.serviceVendor,
+                              serialNumber: service.serialNumber || ''
+                            });
+                          }}
+                        >
+                          <Edit2 size={16} /> Edit
+                        </button>
+                        <button
+                          style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteService(service.id);
+                          }}
+                        >
+                          <Trash2 size={16} /> Delete
+                        </button>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: '13px', color: '#94a3b8' }}>Admin actions restricted</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

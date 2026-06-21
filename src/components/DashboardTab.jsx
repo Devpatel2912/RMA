@@ -69,7 +69,7 @@ export default function DashboardTab({ recentActivities, handleExportData, setVi
 
         <div className="activity-list">
           {recentActivities.map((activity, index) => (
-            <div className="activity-item" key={index} onClick={() => setViewingItem(activity)} style={{ cursor: 'pointer' }}>
+            <div className="activity-item" key={index}>
               <div className={`activity-id-box ${activity.statusClass}`} style={{ backgroundColor: 'transparent' }}>
                 <div style={{ backgroundColor: 'currentColor', opacity: 0.1, position: 'absolute', inset: 0, borderRadius: '8px' }}></div>
                 <span style={{ position: 'relative', zIndex: 1, color: 'inherit' }}>{activity.id}</span>

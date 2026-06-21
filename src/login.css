@@ -161,3 +161,16 @@
   background-color: rgba(239, 68, 68, 0.1);
   color: #ef4444;
 }
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}

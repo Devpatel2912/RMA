@@ -187,7 +187,7 @@ export default function PrintReportsTab({ recentActivities }) {
   const filteredSearch = recentActivities.filter(t => 
     t.rma.toLowerCase().includes(searchQuery.toLowerCase()) || 
     t.name.toLowerCase().includes(searchQuery.toLowerCase())
-  ).slice(0, 5);
+  );
 
   return (
     <div className="print-reports-container" style={{ maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
@@ -216,8 +216,8 @@ export default function PrintReportsTab({ recentActivities }) {
             />
           </div>
           
-          {searchQuery && !selectedTicketId && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10 }}>
+          {!selectedTicketId && (
+            <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '16px', maxHeight: '400px', overflowY: 'auto' }}>
               {filteredSearch.length > 0 ? (
                 filteredSearch.map(t => (
                   <div 

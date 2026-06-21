@@ -13,7 +13,8 @@ import {
   Printer,
   Eye,
   EyeOff,
-  Smartphone
+  Smartphone,
+  Loader2
 } from 'lucide-react';
 import './index.css';
 import './modal.css';
@@ -38,6 +39,7 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -528,6 +530,7 @@ function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError('');
+    setIsLoggingIn(true);
     const email = e.target[0].value;
     const password = e.target[1].value;
     try {
@@ -546,6 +549,8 @@ function App() {
         setLoginError("Login failed. Please check your credentials.");
       }
       console.error(err);
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -594,7 +599,9 @@ function App() {
               </div>
             </div>
 
-            <button type="submit" className="login-btn">Sign In</button>
+            <button type="submit" className="login-btn" disabled={isLoggingIn} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+              {isLoggingIn ? <Loader2 size={20} className="animate-spin" /> : 'Sign In'}
+            </button>
           </form>
         </div>
       </div>

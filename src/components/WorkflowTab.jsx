@@ -90,7 +90,7 @@ export default function WorkflowTab({
               const { mainItem, services } = group;
               const hasMultiple = services.length > 1;
               return (
-              <tr className="workflow-tr" key={mainItem.rma} onClick={() => setViewingItem(mainItem)} style={{ cursor: 'pointer' }}>
+              <tr className="workflow-tr" key={mainItem.rma}>
                 <td className="workflow-td ticket-id">{mainItem.rma}</td>
                 <td className="workflow-td">
                   <span className="table-cell-main">{mainItem.name}</span>
