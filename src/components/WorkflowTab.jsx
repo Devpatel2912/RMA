@@ -1,15 +1,49 @@
-import React from 'react';
-import { Search, ArrowRightCircle, Share, Eye } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, ArrowRightCircle, Share, Eye, Loader2 } from 'lucide-react';
+import { useTickets } from '../api/hooks';
 
 export default function WorkflowTab({
-  workflowFilter, setWorkflowFilter,
-  searchQuery, setSearchQuery,
-  filterMonth, setFilterMonth,
-  filterYear, setFilterYear,
-  filteredWorkflowItems,
   setAdvancingItem, setAdvanceDate, setNewSerialNumber, setCourierCharge,
   getTodayDate, handleGenerateReport, setViewingItem, userRole
 }) {
+  const { data: recentActivities = [], isLoading } = useTickets();
+
+  const [workflowFilter, setWorkflowFilter] = useState('All Items');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterMonth, setFilterMonth] = useState('All');
+  const [filterYear, setFilterYear] = useState('All');
+
+  const filteredWorkflowItems = recentActivities.filter(item => {
+    const matchesFilter = workflowFilter === 'All Items' || item.status === workflowFilter.toUpperCase();
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.rma.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.serialNumber && item.serialNumber.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+    let matchesMonth = true;
+    let matchesYear = true;
+    
+    if (item.date) {
+      const [day, month, year] = item.date.split('/');
+      if (filterMonth !== 'All' && filterMonth !== month) matchesMonth = false;
+      if (filterYear !== 'All' && filterYear !== year) matchesYear = false;
+    } else {
+      if (filterMonth !== 'All' || filterYear !== 'All') {
+        matchesMonth = false;
+        matchesYear = false;
+      }
+    }
+
+    return matchesFilter && matchesSearch && matchesMonth && matchesYear;
+  });
+
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '40px' }}>
+        <Loader2 className="lucide-spin" size={32} color="#64748b" />
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="workflow-header">

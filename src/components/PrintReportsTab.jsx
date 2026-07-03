@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Printer, Search, CheckCircle2, Package, Truck, UserCheck } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { generateTicketPDF } from '../utils/pdfGenerator';
 
 const StageCard = ({ title, icon: Icon, isActive, printHandler, summary }) => (
   <div style={{
@@ -80,108 +80,7 @@ export default function PrintReportsTab({ recentActivities }) {
   const stageFlags = getStageStatus(selectedTicket);
 
   const generatePDF = (stageName, ticket) => {
-    const doc = new jsPDF();
-    
-    // Header background
-    doc.setFillColor(15, 23, 42); // #0f172a
-    doc.rect(0, 0, 210, 40, 'F');
-    
-    // Header text
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(28);
-    doc.setFont("helvetica", "bold");
-    doc.text("RMA Flow", 20, 22);
-    
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text(`${stageName} TICKET`, 20, 32);
-
-    doc.setFont("helvetica", "bold");
-    doc.text(`TICKET #: ${ticket.rma}`, 140, 27);
-    
-    let yPos = 60;
-    
-    const drawField = (label, value, x, y) => {
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(100, 116, 139); // slate-500
-      doc.text(label.toUpperCase(), x, y);
-      
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(15, 23, 42); // slate-900
-      const textVal = value ? value.toString() : "N/A";
-      const splitVal = doc.splitTextToSize(textVal, 80);
-      doc.text(splitVal, x, y + 6);
-      return splitVal.length * 6;
-    };
-
-    drawField("Customer Name", ticket.name, 20, yPos);
-    drawField("Contact Number", ticket.contactNumber, 110, yPos);
-    yPos += 20;
-    
-    drawField("Email Address", ticket.email, 20, yPos);
-    drawField("Date", ticket.date, 110, yPos);
-    yPos += 20;
-    
-    doc.setDrawColor(226, 232, 240); // slate-200
-    doc.line(20, yPos, 190, yPos);
-    yPos += 15;
-
-    drawField("Product Model", ticket.product, 20, yPos);
-    drawField("Category", ticket.category, 110, yPos);
-    yPos += 20;
-
-    drawField("Service Vendor", ticket.serviceVendor, 20, yPos);
-    
-    if (stageName === 'VENDOR INWARD' || stageName === 'CUSTOMER OUTWARD' || stageName === 'FINAL RESOLUTION') {
-      drawField("Courier Charge", ticket.courierCharge, 110, yPos);
-      yPos += 20;
-      doc.line(20, yPos, 190, yPos);
-      yPos += 15;
-      drawField("Original Serial #", ticket.oldSerialNumber || ticket.serialNumber, 20, yPos);
-      drawField("New Replacement Serial #", ticket.serialNumber, 110, yPos);
-      yPos += 30;
-    } else {
-      drawField("Serial Number", ticket.serialNumber, 110, yPos);
-      yPos += 30;
-    }
-
-    const addImageToDoc = (label, imgData) => {
-      try {
-        if (yPos > 200) { doc.addPage(); yPos = 20; }
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(100, 116, 139);
-        doc.text(label, 20, yPos);
-        yPos += 5;
-        doc.addImage(imgData, 'JPEG', 20, yPos, 100, 100, undefined, 'FAST');
-        yPos += 110;
-      } catch(e) {
-        console.error("Failed to add image to PDF", e);
-      }
-    };
-
-    if (stageName === 'CUSTOMER INWARD' && ticket.inwardImageURL) {
-      addImageToDoc("CUSTOMER INWARD IMAGE", ticket.inwardImageURL);
-    }
-    
-    if (stageName === 'VENDOR OUTWARD' && ticket.outwardImageURL) {
-      addImageToDoc("SHIPPING SLIP IMAGE", ticket.outwardImageURL);
-    }
-
-    if (stageName === 'VENDOR INWARD' && ticket.vendorInwardImageURL) {
-      addImageToDoc("REPLACEMENT PRODUCT IMAGE", ticket.vendorInwardImageURL);
-    }
-
-    if (stageName === 'FINAL RESOLUTION') {
-      if (ticket.inwardImageURL) addImageToDoc("CUSTOMER INWARD IMAGE", ticket.inwardImageURL);
-      if (ticket.outwardImageURL) addImageToDoc("SHIPPING SLIP IMAGE", ticket.outwardImageURL);
-      if (ticket.vendorInwardImageURL) addImageToDoc("REPLACEMENT PRODUCT IMAGE", ticket.vendorInwardImageURL);
-    }
-    
-    window.open(doc.output('bloburl'), '_blank');
-    doc.save(`${ticket.rma}_${stageName.replace(' ', '_')}.pdf`);
+    generateTicketPDF(stageName, ticket);
   };
 
   const filteredSearch = recentActivities.filter(t => 

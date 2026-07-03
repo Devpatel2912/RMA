@@ -16,6 +16,8 @@ import {
   Smartphone,
   Loader2
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useTickets, useVendors } from './api/hooks';
 import './index.css';
 import './modal.css';
 import './workflow.css';
@@ -35,7 +37,17 @@ import TicketDetailsModal from './components/TicketDetailsModal';
 import PrintReportsTab from './components/PrintReportsTab';
 import WhatsAppSettings from './components/WhatsAppSettings';
 
+// Initialize Axios default token if available in localStorage
+const initialToken = localStorage.getItem('token');
+if (initialToken) {
+  axios.defaults.headers.common['Authorization'] = `Bearer ${initialToken}`;
+}
+
 function App() {
+  const queryClient = useQueryClient();
+  const { data: recentActivities = [] } = useTickets();
+  const { data: vendors = [] } = useVendors();
+
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
@@ -44,10 +56,6 @@ function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newVendorName, setNewVendorName] = useState('');
   const [advancingItem, setAdvancingItem] = useState(null);
   const [viewingItem, setViewingItem] = useState(null);
   const [shippingImagePreview, setShippingImagePreview] = useState(null);
@@ -55,13 +63,6 @@ function App() {
   const [newSerialNumber, setNewSerialNumber] = useState('');
   const [courierCharge, setCourierCharge] = useState('');
   const [customMessage, setCustomMessage] = useState('');
-  const [workflowFilter, setWorkflowFilter] = useState('All Items');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterMonth, setFilterMonth] = useState('All');
-  const [filterYear, setFilterYear] = useState('All');
-
-  const [categories, setCategories] = useState([]);
-  const [vendors, setVendors] = useState([]);
 
   const getTodayDate = () => new Date().toISOString().split('T')[0];
 
@@ -80,31 +81,31 @@ function App() {
     rma: null
   });
 
-  const [recentActivities, setRecentActivities] = useState([]);
-
   const [userRole, setUserRole] = useState(localStorage.getItem('userRole') || null);
 
-  const fetchBackendData = async () => {
-    try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-      const catRes = await axios.get(`${baseUrl}/categories`);
-      setCategories(catRes.data.map(c => c.name));
-      const venRes = await axios.get(`${baseUrl}/vendors`);
-      setVendors(venRes.data.map(v => v.companyName));
-      const ticRes = await axios.get(`${baseUrl}/tickets`);
-      setRecentActivities(ticRes.data);
-    } catch (e) {
-      console.error("Failed to fetch data:", e);
-    }
-  };
-
   useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      response => response,
+      error => {
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('userRole');
+          delete axios.defaults.headers.common['Authorization'];
+          setIsLoggedIn(false);
+        }
+        return Promise.reject(error);
+      }
+    );
+
     const token = localStorage.getItem('token');
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setIsLoggedIn(true);
-      fetchBackendData();
     }
+
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
   }, []);
 
   // Barcode Scanner Global Listener
@@ -198,7 +199,7 @@ function App() {
         serviceVendor: formData.serviceVendor,
         inwardImageURL: imgData
       }).then(() => {
-        fetchBackendData();
+        queryClient.invalidateQueries({ queryKey: ['tickets'] });
         setIsModalOpen(false);
         setFormData({
           customerName: '',
@@ -286,7 +287,7 @@ function App() {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
     axios.put(`${baseUrl}/tickets/${advancingItem.id}/status`, updateData)
       .then(() => {
-        fetchBackendData();
+        queryClient.invalidateQueries({ queryKey: ['tickets'] });
       })
       .catch(err => {
         console.error("Failed to update status:", err);
@@ -475,7 +476,7 @@ function App() {
     // Mark as completed
     axios.put(`${baseUrl}/tickets/${item.id}/status`, { status: 'COMPLETED', date: getTodayDate() })
       .then(() => {
-        fetchBackendData();
+        queryClient.invalidateQueries({ queryKey: ['tickets'] });
         // After successfully marking completed, send WhatsApp to customer
         const payloadItem = { ...item, customerName: item.name };
         axios.post(`${baseUrl}/whatsapp/send-pdf`, { 
@@ -541,7 +542,6 @@ function App() {
       axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
       setUserRole(res.data.user.role);
       setIsLoggedIn(true);
-      fetchBackendData();
     } catch (err) {
       if (err.response && err.response.data && err.response.data.error) {
         setLoginError(err.response.data.error);
@@ -607,29 +607,6 @@ function App() {
       </div>
     );
   }
-
-  const filteredWorkflowItems = recentActivities.filter(item => {
-    const matchesFilter = workflowFilter === 'All Items' || item.status === workflowFilter.toUpperCase();
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.rma.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.serialNumber && item.serialNumber.toLowerCase().includes(searchQuery.toLowerCase()));
-      
-    let matchesMonth = true;
-    let matchesYear = true;
-    
-    if (item.date) {
-      const [day, month, year] = item.date.split('/');
-      if (filterMonth !== 'All' && filterMonth !== month) matchesMonth = false;
-      if (filterYear !== 'All' && filterYear !== year) matchesYear = false;
-    } else {
-      if (filterMonth !== 'All' || filterYear !== 'All') {
-        matchesMonth = false;
-        matchesYear = false;
-      }
-    }
-
-    return matchesFilter && matchesSearch && matchesMonth && matchesYear;
-  });
 
   return (
     <div className="layout">
@@ -746,7 +723,6 @@ function App() {
         <div className="main-content">
           {activeTab === 'dashboard' && (
             <DashboardTab 
-              recentActivities={recentActivities} 
               handleExportData={handleExportData} 
               setViewingItem={setViewingItem} 
             />
@@ -754,15 +730,6 @@ function App() {
 
           {activeTab === 'workflow' && (
             <WorkflowTab 
-              workflowFilter={workflowFilter} 
-              setWorkflowFilter={setWorkflowFilter}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              filterMonth={filterMonth}
-              setFilterMonth={setFilterMonth}
-              filterYear={filterYear}
-              setFilterYear={setFilterYear}
-              filteredWorkflowItems={filteredWorkflowItems}
               setAdvancingItem={setAdvancingItem}
               setAdvanceDate={setAdvanceDate}
               setNewSerialNumber={setNewSerialNumber}
@@ -775,25 +742,11 @@ function App() {
           )}
 
           {activeTab === 'categories' && (
-            <ManageCategoriesTab 
-              categories={categories}
-              setCategories={setCategories}
-              newCategoryName={newCategoryName}
-              setNewCategoryName={setNewCategoryName}
-              userRole={userRole}
-              fetchBackendData={fetchBackendData}
-            />
+            <ManageCategoriesTab userRole={userRole} />
           )}
 
           {activeTab === 'vendors' && (
-            <ManageVendorsTab 
-              vendors={vendors}
-              setVendors={setVendors}
-              newVendorName={newVendorName}
-              setNewVendorName={setNewVendorName}
-              userRole={userRole}
-              fetchBackendData={fetchBackendData}
-            />
+            <ManageVendorsTab userRole={userRole} />
           )}
 
           {activeTab === 'print' && (
@@ -833,8 +786,6 @@ function App() {
           formData={formData}
           setFormData={setFormData}
           handleInputChange={handleInputChange}
-          categories={categories}
-          vendors={vendors.map(v => typeof v === 'string' ? v : v.companyName)}
           handleSaveInward={handleSaveInward}
         />
       )}
@@ -842,9 +793,6 @@ function App() {
       <TicketDetailsModal
         viewingItem={viewingItem}
         setViewingItem={setViewingItem}
-        recentActivities={recentActivities}
-        categories={categories}
-        vendors={vendors.map(v => typeof v === 'string' ? v : v.companyName)}
         setAdvancingItem={setAdvancingItem}
         setAdvanceDate={setAdvanceDate}
         setNewSerialNumber={setNewSerialNumber}
@@ -852,8 +800,6 @@ function App() {
         getTodayDate={getTodayDate}
         handleGenerateReport={handleGenerateReport}
         userRole={userRole}
-        fetchBackendData={fetchBackendData}
-
       />
 
       <AdvanceWorkflowModal

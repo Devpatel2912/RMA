@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, Plus, Eye, Save, Upload, ChevronDown, Search, ArrowRightCircle, Share, Edit2, Trash2 } from 'lucide-react';
 import axios from 'axios';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCategories, useVendors } from '../api/hooks';
 
 const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -67,14 +69,20 @@ const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
 };
 
 export default function TicketDetailsModal({ 
-  viewingItem, setViewingItem, recentActivities, categories, vendors, onSaveInlineService,
-  setAdvancingItem, setAdvanceDate, setNewSerialNumber, setCourierCharge, getTodayDate, handleGenerateReport, userRole, fetchBackendData
+  viewingItem, setViewingItem, onSaveInlineService,
+  setAdvancingItem, setAdvanceDate, setNewSerialNumber, setCourierCharge, getTodayDate, handleGenerateReport, userRole
 }) {
+  const queryClient = useQueryClient();
+  const { data: categories = [] } = useCategories();
+  const { data: vendors = [] } = useVendors();
+  const categoryNames = categories.map(c => c.name);
+  const vendorNames = vendors.map(v => v.companyName);
+
   const [previewImage, setPreviewImage] = useState(null);
   const [inlineData, setInlineData] = useState({
     productName: '',
-    category: categories ? categories[0] : '',
-    serviceVendor: vendors ? vendors[0] : '',
+    category: categoryNames.length > 0 ? categoryNames[0] : '',
+    serviceVendor: vendorNames.length > 0 ? vendorNames[0] : '',
     serialNumber: '',
     image: null,
     imageName: ''
@@ -88,7 +96,7 @@ export default function TicketDetailsModal({
     try {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
       await axios.delete(`${baseUrl}/tickets/${serviceId}`);
-      if (fetchBackendData) fetchBackendData();
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
     } catch (err) {
       console.error("Failed to delete service:", err);
       alert("Failed to delete service.");
@@ -109,7 +117,7 @@ export default function TicketDetailsModal({
         serialNumber: editData.serialNumber
       });
       setEditingServiceId(null);
-      if (fetchBackendData) fetchBackendData();
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
     } catch (err) {
       console.error("Failed to update service:", err);
       alert("Failed to update service.");
@@ -150,8 +158,8 @@ export default function TicketDetailsModal({
 
     setInlineData({
       productName: '',
-      category: categories ? categories[0] : '',
-      serviceVendor: vendors ? vendors[0] : '',
+      category: categoryNames.length > 0 ? categoryNames[0] : '',
+      serviceVendor: vendorNames.length > 0 ? vendorNames[0] : '',
       serialNumber: '',
       image: null,
       imageName: ''
@@ -208,7 +216,7 @@ export default function TicketDetailsModal({
                 <div>
                   <label style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, marginBottom: '4px', display: 'block' }}>Category</label>
                   <SearchableDropdown 
-                    options={categories} 
+                    options={categoryNames} 
                     value={editData.category} 
                     onChange={(val) => setEditData({...editData, category: val})} 
                   />
@@ -216,7 +224,7 @@ export default function TicketDetailsModal({
                 <div>
                   <label style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, marginBottom: '4px', display: 'block' }}>Vendor</label>
                   <SearchableDropdown 
-                    options={vendors} 
+                    options={vendorNames} 
                     value={editData.serviceVendor} 
                     onChange={(val) => setEditData({...editData, serviceVendor: val})} 
                   />

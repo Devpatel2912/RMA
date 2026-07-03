@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Camera, Upload } from 'lucide-react';
+import CameraCapture from './CameraCapture';
+import { useCategories, useVendors } from '../api/hooks';
 
 const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -101,7 +103,14 @@ const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
   );
 };
 
-export default function NewInwardModal({ setIsModalOpen, formData, setFormData, handleInputChange, categories, vendors, handleSaveInward }) {
+export default function NewInwardModal({ setIsModalOpen, formData, setFormData, handleInputChange, handleSaveInward }) {
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const { data: categories = [] } = useCategories();
+  const { data: vendors = [] } = useVendors();
+
+  const categoryNames = categories.map(c => c.name);
+  const vendorNames = vendors.map(v => v.companyName);
+
   return (
     <div className="modal-overlay">
       <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -165,16 +174,16 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
             <div className="form-group">
               <label className="form-label">Category *</label>
               <SearchableDropdown
-                options={categories}
+                options={categoryNames}
                 value={formData.category}
-                onChange={(val) => setFormData(prev => ({ ...prev, category: val }))}
-                placeholder="Select category..."
+                onChange={(val) => handleInputChange({ target: { name: 'category', value: val } })}
+                placeholder="Select a category"
               />
             </div>
             <div className="form-group">
               <label className="form-label">Service Vendor *</label>
               <SearchableDropdown
-                options={vendors}
+                options={vendorNames}
                 value={formData.serviceVendor}
                 onChange={(val) => setFormData(prev => ({ ...prev, serviceVendor: val }))}
                 placeholder="Select vendor..."
@@ -210,13 +219,52 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Upload Image *</label>
-              <input
-                type="file"
-                className="form-input"
-                accept="image/*"
-                onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.files[0] }))}
-                style={{ padding: '8px' }}
-              />
+              {isCameraOpen ? (
+                <CameraCapture 
+                  onCapture={(file) => {
+                    setFormData(prev => ({ ...prev, image: file }));
+                    setIsCameraOpen(false);
+                  }}
+                  onCancel={() => setIsCameraOpen(false)}
+                />
+              ) : (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" onClick={() => setIsCameraOpen(true)} style={{ flex: 1, padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', textAlign: 'center', cursor: 'pointer', backgroundColor: '#f8fafc', fontSize: '14px', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <Camera size={16} /> Camera
+                  </button>
+                  <label style={{ flex: 1, padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', textAlign: 'center', cursor: 'pointer', backgroundColor: '#f8fafc', fontSize: '14px', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <Upload size={16} /> Upload
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.files[0] }))}
+                    />
+                  </label>
+                </div>
+              )}
+              {formData.image && !isCameraOpen && (
+                <div style={{ marginTop: '12px' }}>
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    <img 
+                      src={URL.createObjectURL(formData.image)} 
+                      alt="Preview" 
+                      style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'block' }} 
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, image: null }))}
+                      style={{ position: 'absolute', top: '-8px', right: '-8px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
+                      title="Remove image"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#10b981', marginTop: '6px', fontWeight: 500 }}>
+                    Selected: {formData.image.name}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="form-group">
               <label className="form-label">Inward Date *</label>

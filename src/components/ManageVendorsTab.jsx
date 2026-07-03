@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
-import { X, Building2, MapPin, FileText, Phone, Mail, Pencil, Trash2 } from 'lucide-react';
+import { X, Building2, MapPin, FileText, Phone, Mail, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useVendors } from '../api/hooks';
 
-export default function ManageVendorsTab({ vendors, setVendors, userRole, fetchBackendData }) {
+export default function ManageVendorsTab({ userRole }) {
+  const queryClient = useQueryClient();
+  const { data: fullVendors = [], isLoading } = useVendors();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [fullVendors, setFullVendors] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     companyName: '',
@@ -14,19 +17,7 @@ export default function ManageVendorsTab({ vendors, setVendors, userRole, fetchB
     email: ''
   });
 
-  const loadVendors = async () => {
-    try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-      const res = await axios.get(`${baseUrl}/vendors`);
-      setFullVendors(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
-  useEffect(() => {
-    loadVendors();
-  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -49,8 +40,7 @@ export default function ManageVendorsTab({ vendors, setVendors, userRole, fetchB
       setIsModalOpen(false);
       setEditingId(null);
       setFormData({ companyName: '', address: '', gstNumber: '', phoneNumber: '', email: '' });
-      loadVendors();
-      fetchBackendData();
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
     } catch (err) {
       alert(`Failed to ${editingId ? 'update' : 'add'} vendor. Note: Only Admins can modify vendors.`);
       console.error(err);
@@ -60,10 +50,8 @@ export default function ManageVendorsTab({ vendors, setVendors, userRole, fetchB
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this vendor?")) {
       try {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
         await axios.delete(`${baseUrl}/vendors/${id}`);
-        loadVendors();
-        fetchBackendData();
+        queryClient.invalidateQueries({ queryKey: ['vendors'] });
       } catch (err) {
         if (err.response && err.response.data && err.response.data.error) {
           alert(err.response.data.error);
@@ -101,6 +89,11 @@ export default function ManageVendorsTab({ vendors, setVendors, userRole, fetchB
         </div>
       </div>
 
+      {isLoading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '40px' }}>
+          <Loader2 className="lucide-spin" size={32} color="#64748b" />
+        </div>
+      ) : (
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px' }}>
           <button 
@@ -162,6 +155,7 @@ export default function ManageVendorsTab({ vendors, setVendors, userRole, fetchB
           ))}
         </div>
       </div>
+      )}
 
       {isModalOpen && (
         <div className="modal-overlay">

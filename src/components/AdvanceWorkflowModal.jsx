@@ -1,4 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Camera, Upload, X } from 'lucide-react';
+import CameraCapture from './CameraCapture';
+import { generateTicketPDF } from '../utils/pdfGenerator';
 
 export default function AdvanceWorkflowModal({
   advancingItem, setAdvancingItem,
@@ -9,6 +12,9 @@ export default function AdvanceWorkflowModal({
   customMessage, setCustomMessage,
   confirmAdvanceStatus
 }) {
+  const [isDocketCameraOpen, setIsDocketCameraOpen] = useState(false);
+  const [isProductCameraOpen, setIsProductCameraOpen] = useState(false);
+
   if (!advancingItem) return null;
 
   return (
@@ -68,35 +74,64 @@ export default function AdvanceWorkflowModal({
               )}
 
               <div className="form-group" style={{ marginBottom: '16px' }}>
-                <label className="form-label">Upload Docket Number</label>
-                <input
-                  type="file"
-                  className="form-input"
-                  style={{ padding: '8px' }}
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) {
+                <label className="form-label" style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Upload Docket Number</label>
+                {isDocketCameraOpen ? (
+                  <CameraCapture 
+                    onCapture={(file) => {
                       const reader = new FileReader();
                       reader.onload = (event) => setShippingImagePreview(event.target.result);
                       reader.readAsDataURL(file);
-                    } else {
-                      setShippingImagePreview(null);
-                    }
-                  }}
-                />
+                      setIsDocketCameraOpen(false);
+                    }}
+                    onCancel={() => setIsDocketCameraOpen(false)}
+                  />
+                ) : (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" onClick={() => setIsDocketCameraOpen(true)} style={{ flex: 1, padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center', cursor: 'pointer', backgroundColor: '#f8fafc', fontSize: '14px', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      <Camera size={16} /> Camera
+                    </button>
+                    <label style={{ flex: 1, padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center', cursor: 'pointer', backgroundColor: '#f8fafc', fontSize: '14px', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      <Upload size={16} /> Upload
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => setShippingImagePreview(event.target.result);
+                            reader.readAsDataURL(file);
+                          } else {
+                            setShippingImagePreview(null);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
 
-              {shippingImagePreview && (
+              {shippingImagePreview && !isDocketCameraOpen && (
                 <div style={{ marginBottom: '16px' }}>
                   <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Shipping Image Preview</span>
-                  <img src={shippingImagePreview} alt="Shipping Preview" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    <img src={shippingImagePreview} alt="Shipping Preview" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                    <button 
+                      type="button"
+                      onClick={() => setShippingImagePreview(null)}
+                      style={{ position: 'absolute', top: '-8px', right: '-8px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
+                      title="Remove image"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
                 </div>
               )}
 
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => generateTicketPDF(advancingItem.status, advancingItem)}
                 style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#0f172a', fontWeight: 600, cursor: 'pointer', marginBottom: '16px' }}
               >
                 Print Ticket
@@ -138,34 +173,63 @@ export default function AdvanceWorkflowModal({
 
               <div className="form-group" style={{ marginBottom: '16px' }}>
                 <label className="form-label" style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Upload Product Image</label>
-                <input
-                  type="file"
-                  className="form-input"
-                  style={{ padding: '8px', fontSize: '14px', width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px' }}
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) {
+                {isProductCameraOpen ? (
+                  <CameraCapture 
+                    onCapture={(file) => {
                       const reader = new FileReader();
                       reader.onload = (event) => setShippingImagePreview(event.target.result);
                       reader.readAsDataURL(file);
-                    } else {
-                      setShippingImagePreview(null);
-                    }
-                  }}
-                />
+                      setIsProductCameraOpen(false);
+                    }}
+                    onCancel={() => setIsProductCameraOpen(false)}
+                  />
+                ) : (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" onClick={() => setIsProductCameraOpen(true)} style={{ flex: 1, padding: '8px', border: '1px solid #e2e8f0', borderRadius: '4px', textAlign: 'center', cursor: 'pointer', backgroundColor: '#f8fafc', fontSize: '14px', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      <Camera size={16} /> Camera
+                    </button>
+                    <label style={{ flex: 1, padding: '8px', border: '1px solid #e2e8f0', borderRadius: '4px', textAlign: 'center', cursor: 'pointer', backgroundColor: '#f8fafc', fontSize: '14px', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      <Upload size={16} /> Upload
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => setShippingImagePreview(event.target.result);
+                            reader.readAsDataURL(file);
+                          } else {
+                            setShippingImagePreview(null);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
 
-              {shippingImagePreview && (
+              {shippingImagePreview && !isProductCameraOpen && (
                 <div style={{ marginBottom: '16px' }}>
                   <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Image Preview</span>
-                  <img src={shippingImagePreview} alt="Product Preview" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    <img src={shippingImagePreview} alt="Product Preview" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                    <button 
+                      type="button"
+                      onClick={() => setShippingImagePreview(null)}
+                      style={{ position: 'absolute', top: '-8px', right: '-8px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
+                      title="Remove image"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
                 </div>
               )}
 
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => generateTicketPDF(advancingItem.status, advancingItem)}
                 style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#0f172a', fontWeight: 600, cursor: 'pointer', marginBottom: '16px' }}
               >
                 Print Ticket
@@ -205,7 +269,7 @@ export default function AdvanceWorkflowModal({
               </div>
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => generateTicketPDF(advancingItem.status, advancingItem)}
                 style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#0f172a', fontWeight: 600, cursor: 'pointer', marginTop: '16px' }}
               >
                 Print Ticket

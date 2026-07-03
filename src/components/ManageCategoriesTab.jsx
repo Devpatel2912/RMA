@@ -1,33 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Loader2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCategories } from '../api/hooks';
 
-export default function ManageCategoriesTab({ categories, setCategories, newCategoryName, setNewCategoryName, userRole, fetchBackendData }) {
-  const [fullCategories, setFullCategories] = useState([]);
+export default function ManageCategoriesTab({ newCategoryName, setNewCategoryName, userRole }) {
+  const queryClient = useQueryClient();
+  const { data: fullCategories = [], isLoading } = useCategories();
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
 
-  const loadCategories = async () => {
-    try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-      const res = await axios.get(`${baseUrl}/categories`);
-      setFullCategories(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
-  useEffect(() => {
-    loadCategories();
-  }, []);
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this category?")) {
       try {
         const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
         await axios.delete(`${baseUrl}/categories/${id}`);
-        loadCategories();
-        fetchBackendData(); // update global dropdowns
+        queryClient.invalidateQueries({ queryKey: ['categories'] });
       } catch (err) {
         if (err.response && err.response.data && err.response.data.error) {
           alert(err.response.data.error);
@@ -44,8 +34,7 @@ export default function ManageCategoriesTab({ categories, setCategories, newCate
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
       await axios.put(`${baseUrl}/categories/${id}`, { name: editName.trim() });
       setEditingId(null);
-      loadCategories();
-      fetchBackendData(); // update global dropdowns
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
     } catch (err) {
       alert("Failed to update category.");
     }
@@ -59,6 +48,12 @@ export default function ManageCategoriesTab({ categories, setCategories, newCate
           <p className="page-subtitle">Add and view product categories.</p>
         </div>
       </div>
+
+      {isLoading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '40px' }}>
+          <Loader2 className="lucide-spin" size={32} color="#64748b" />
+        </div>
+      ) : (
 
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
         <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
@@ -78,8 +73,7 @@ export default function ManageCategoriesTab({ categories, setCategories, newCate
                   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
                   await axios.post(`${baseUrl}/categories`, { name: newCategoryName.trim() });
                   setNewCategoryName('');
-                  loadCategories();
-                  fetchBackendData();
+                  queryClient.invalidateQueries({ queryKey: ['categories'] });
                 } catch (err) {
                   alert("Failed to add category. Note: Only Admins can add categories.");
                 }
@@ -119,6 +113,7 @@ export default function ManageCategoriesTab({ categories, setCategories, newCate
           ))}
         </div>
       </div>
+      )}
     </>
   );
 }
