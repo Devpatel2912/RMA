@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { X, Plus, Eye, Save, Upload, ChevronDown, Search, ArrowRightCircle, Share, Edit2, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCategories, useVendors } from '../api/hooks';
+import { useCategories, useVendors, useTicket } from '../api/hooks';
 
 const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -75,6 +75,7 @@ export default function TicketDetailsModal({
   const queryClient = useQueryClient();
   const { data: categories = [] } = useCategories();
   const { data: vendors = [] } = useVendors();
+  const { data: fullTicket } = useTicket(viewingItem?.id);
   const categoryNames = categories.map(c => c.name);
   const vendorNames = vendors.map(v => v.companyName);
 
@@ -126,8 +127,8 @@ export default function TicketDetailsModal({
 
   if (!viewingItem) return null;
 
-  // Use viewingItem directly as there is only one product per ticket
-  const service = viewingItem;
+  // Use fullTicket if available to get image data, otherwise fallback to viewingItem
+  const service = fullTicket || viewingItem;
 
   const handleInlineImageChange = (e) => {
     const file = e.target.files[0];

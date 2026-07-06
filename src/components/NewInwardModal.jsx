@@ -160,6 +160,19 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
           </div>
 
           <div className="form-group">
+            <label className="form-label">Customer Address</label>
+            <textarea
+              className="form-input"
+              placeholder="e.g. 123 Main St, Anand, Gujarat"
+              name="customerAddress"
+              value={formData.customerAddress || ''}
+              onChange={handleInputChange}
+              rows="2"
+              style={{ resize: 'vertical' }}
+            />
+          </div>
+
+          <div className="form-group">
             <label className="form-label">Product Name / Model *</label>
             <input
               type="text"

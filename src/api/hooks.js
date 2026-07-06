@@ -15,6 +15,18 @@ export const useTickets = () => {
   });
 };
 
+export const useTicket = (id) => {
+  return useQuery({
+    queryKey: ['ticket', id],
+    queryFn: async () => {
+      const res = await axios.get(`${baseUrl}/tickets/${id}`);
+      return res.data;
+    },
+    enabled: !!id,
+    refetchOnWindowFocus: false,
+  });
+};
+
 export const useCategories = () => {
   return useQuery({
     queryKey: ['categories'],

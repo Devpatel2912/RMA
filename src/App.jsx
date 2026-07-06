@@ -64,6 +64,7 @@ function App() {
   const [newSerialNumber, setNewSerialNumber] = useState('');
   const [courierCharge, setCourierCharge] = useState('');
   const [customMessage, setCustomMessage] = useState('');
+  const [generatingReportId, setGeneratingReportId] = useState(null);
 
   const getTodayDate = () => new Date().toISOString().split('T')[0];
 
@@ -193,6 +194,7 @@ function App() {
       setIsModalOpen(false);
       setFormData({
         customerName: '',
+        customerAddress: '',
         contactNumber: '',
         email: '',
         productName: '',
@@ -211,6 +213,7 @@ function App() {
       axios.post(`${baseUrl}/tickets`, {
         rma: newRma,
         customerName: formData.customerName,
+        customerAddress: formData.customerAddress,
         contactNumber: formData.contactNumber,
         email: formData.email,
         product: formData.productName,
@@ -362,36 +365,46 @@ function App() {
     setShippingImagePreview(null);
   };
 
-  const handleGenerateReport = (item) => {
-    // 1. Generate and download/print the highly-styled PDF
-    generateTicketPDF('COMPLETED', item);
-
-    // 2. Only mark as completed and send WhatsApp if it's not already completed
-    if (item.status !== 'COMPLETED') {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+  const handleGenerateReport = async (item) => {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+    setGeneratingReportId(item.id);
+    try {
+      // Fetch the full ticket to get the images, as they are excluded from the main list for performance
+      const res = await axios.get(`${baseUrl}/tickets/${item.id}`);
+      const fullItem = res.data;
       
-      // Optimistic update
-      queryClient.setQueryData(['tickets'], (old) => {
-        if (!old) return old;
-        return old.map(t => t.id === item.id ? { ...t, status: 'COMPLETED', statusClass: 'bg-green-dark' } : t);
-      });
+      // 1. Generate and download/print the highly-styled PDF using the full item
+      generateTicketPDF('COMPLETED', fullItem);
 
-      axios.put(`${baseUrl}/tickets/${item.id}/status`, { status: 'COMPLETED', date: getTodayDate() })
-        .then(() => {
-          queryClient.invalidateQueries({ queryKey: ['tickets'] });
-          // After successfully marking completed, send WhatsApp to customer
-          const payloadItem = { ...item, customerName: item.name };
-          axios.post(`${baseUrl}/whatsapp/send-pdf`, { 
+      // 2. Only mark as completed and send WhatsApp if it's not already completed
+      if (item.status !== 'COMPLETED') {
+        // Optimistic update
+        queryClient.setQueryData(['tickets'], (old) => {
+          if (!old) return old;
+          return old.map(t => t.id === item.id ? { ...t, status: 'COMPLETED', statusClass: 'bg-green-dark' } : t);
+        });
+
+        await axios.put(`${baseUrl}/tickets/${item.id}/status`, { status: 'COMPLETED', date: getTodayDate() });
+        queryClient.invalidateQueries({ queryKey: ['tickets'] });
+        
+        // After successfully marking completed, send WhatsApp to customer
+        const payloadItem = { ...fullItem, customerName: fullItem.name };
+        try {
+          const waRes = await axios.post(`${baseUrl}/whatsapp/send-pdf`, { 
             ticketData: payloadItem, 
-            message: `Hello ${item.name}, your RMA ticket (${item.rma}) has been completed. Please find your final replacement report attached.` 
-          })
-            .then(res => console.log("Final Report WhatsApp Sent:", res.data))
-            .catch(err => {
-              console.error("Failed to send WhatsApp Final Report:", err);
-              alert("WhatsApp Final Report failed: " + (err.response?.data?.error || err.message));
-            });
-        })
-        .catch(err => console.error("Failed to mark completed:", err));
+            message: `Hello ${fullItem.name}, your RMA ticket (${fullItem.rma}) has been completed. Please find your final replacement report attached.` 
+          });
+          console.log("Final Report WhatsApp Sent:", waRes.data);
+        } catch (err) {
+          console.error("Failed to send WhatsApp Final Report:", err);
+          alert("WhatsApp Final Report failed: " + (err.response?.data?.error || err.message));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to process report:", err);
+      alert("Failed to process report.");
+    } finally {
+      setGeneratingReportId(null);
     }
   };
 
@@ -642,6 +655,7 @@ function App() {
               setCourierCharge={setCourierCharge}
               getTodayDate={getTodayDate}
               handleGenerateReport={handleGenerateReport}
+              generatingReportId={generatingReportId}
               setViewingItem={setViewingItem}
               userRole={userRole}
             />

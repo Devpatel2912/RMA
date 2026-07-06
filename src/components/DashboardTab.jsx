@@ -76,7 +76,7 @@ export default function DashboardTab({ handleExportData, setViewingItem }) {
         </div>
 
         <div className="activity-list">
-          {recentActivities.map((activity, index) => (
+          {recentActivities.slice(0, 10).map((activity, index) => (
             <div className="activity-item" key={index}>
               <div className={`activity-id-box ${activity.statusClass}`} style={{ backgroundColor: 'transparent' }}>
                 <div style={{ backgroundColor: 'currentColor', opacity: 0.1, position: 'absolute', inset: 0, borderRadius: '8px' }}></div>

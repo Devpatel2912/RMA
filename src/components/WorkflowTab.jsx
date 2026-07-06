@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Search, ArrowRightCircle, Share, Eye, Printer } from 'lucide-react';
+import { Search, ArrowRightCircle, Share, Eye, Printer, Loader2 } from 'lucide-react';
 import { useTickets } from '../api/hooks';
 import { SkeletonLoader } from './Spinner';
 
 export default function WorkflowTab({
   setAdvancingItem, setAdvanceDate, setNewSerialNumber, setCourierCharge,
-  getTodayDate, handleGenerateReport, setViewingItem, userRole
+  getTodayDate, handleGenerateReport, generatingReportId, setViewingItem, userRole
 }) {
   const { data: recentActivities = [], isLoading } = useTickets();
 
@@ -13,6 +13,8 @@ export default function WorkflowTab({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMonth, setFilterMonth] = useState('All');
   const [filterYear, setFilterYear] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   const filteredWorkflowItems = recentActivities.filter(item => {
     const matchesFilter = workflowFilter === 'All Items' || item.status === workflowFilter.toUpperCase();
@@ -36,6 +38,23 @@ export default function WorkflowTab({
 
     return matchesFilter && matchesSearch && matchesMonth && matchesYear;
   });
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [workflowFilter, searchQuery, filterMonth, filterYear]);
+
+  const groupedWorkflowItems = React.useMemo(() => {
+    const groups = filteredWorkflowItems.reduce((acc, item) => {
+      if (!acc[item.rma]) acc[item.rma] = { mainItem: item, services: [] };
+      acc[item.rma].services.push(item);
+      return acc;
+    }, {});
+    return Object.values(groups);
+  }, [filteredWorkflowItems]);
+
+  const totalPages = Math.max(1, Math.ceil(groupedWorkflowItems.length / itemsPerPage));
+  const paginatedGroups = groupedWorkflowItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   if (isLoading) {
     return <SkeletonLoader rows={7} />;
@@ -67,8 +86,8 @@ export default function WorkflowTab({
             style={{ width: '100px' }}
           >
             <option value="All">All Years</option>
-            {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => (
-              <option key={y} value={y.toString()}>{y}</option>
+            {Array.from(new Set(recentActivities.map(a => a.date?.split('/')[2]).filter(Boolean))).map(y => (
+              <option key={y} value={y}>{y}</option>
             ))}
           </select>
 
@@ -108,16 +127,7 @@ export default function WorkflowTab({
             </tr>
           </thead>
           <tbody>
-            {Object.values(filteredWorkflowItems.reduce((acc, item) => {
-              if (!acc[item.rma]) {
-                acc[item.rma] = {
-                  mainItem: item,
-                  services: []
-                };
-              }
-              acc[item.rma].services.push(item);
-              return acc;
-            }, {})).map((group) => {
+            {paginatedGroups.map((group) => {
               const { mainItem, services } = group;
               const hasMultiple = services.length > 1;
               return (
@@ -187,14 +197,17 @@ export default function WorkflowTab({
                       ) : (
                         <button
                           className="action-btn"
-                          style={{ color: '#059669', backgroundColor: '#d1fae5' }}
+                          style={{ color: generatingReportId === mainItem.id ? '#94a3b8' : '#059669', backgroundColor: generatingReportId === mainItem.id ? '#e2e8f0' : '#d1fae5', cursor: generatingReportId === mainItem.id ? 'not-allowed' : 'pointer' }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleGenerateReport(mainItem);
+                            if (generatingReportId !== mainItem.id) {
+                              handleGenerateReport(mainItem);
+                            }
                           }}
-                          title={mainItem.status === 'COMPLETED' ? "Download Final Report" : "Complete Ticket & Send Final Report to WhatsApp"}
+                          disabled={generatingReportId === mainItem.id}
+                          title={generatingReportId === mainItem.id ? "Generating Report..." : mainItem.status === 'COMPLETED' ? "Download Final Report" : "Complete Ticket & Send Final Report to WhatsApp"}
                         >
-                          {mainItem.status === 'COMPLETED' ? <Printer size={20} /> : <Share size={20} />}
+                          {generatingReportId === mainItem.id ? <Loader2 size={20} className="spinner" /> : mainItem.status === 'COMPLETED' ? <Printer size={20} /> : <Share size={20} />}
                         </button>
                       )
                     ) : (
@@ -206,6 +219,28 @@ export default function WorkflowTab({
             )})}
           </tbody>
         </table>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: 'var(--surface)', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px', borderTop: '1px solid var(--border)' }}>
+        <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+          Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredWorkflowItems.length)} of {filteredWorkflowItems.length} items
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button 
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: currentPage === 1 ? '#f8fafc' : 'white', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', color: currentPage === 1 ? '#cbd5e1' : 'var(--text-primary)' }}
+          >
+            Previous
+          </button>
+          <button 
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: currentPage === totalPages ? '#f8fafc' : 'white', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', color: currentPage === totalPages ? '#cbd5e1' : 'var(--text-primary)' }}
+          >
+            Next
+          </button>
+        </div>
       </div>
     </>
   );
