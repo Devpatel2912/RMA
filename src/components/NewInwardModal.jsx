@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Camera, Upload } from 'lucide-react';
 import CameraCapture from './CameraCapture';
 import { useCategories, useVendors } from '../api/hooks';
+import Spinner from './Spinner';
 
 const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -103,7 +104,7 @@ const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
   );
 };
 
-export default function NewInwardModal({ setIsModalOpen, formData, setFormData, handleInputChange, handleSaveInward }) {
+export default function NewInwardModal({ setIsModalOpen, formData, setFormData, handleInputChange, handleSaveInward, isSaving }) {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const { data: categories = [] } = useCategories();
   const { data: vendors = [] } = useVendors();
@@ -291,8 +292,11 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
         </div>
 
         <div className="modal-footer">
-          <button className="btn-cancel" onClick={() => setIsModalOpen(false)}>Cancel</button>
-          <button className="btn-save" onClick={handleSaveInward}>Save Inward Entry</button>
+          <button className="btn-cancel" onClick={() => setIsModalOpen(false)} disabled={isSaving}>Cancel</button>
+          <button className="btn-save" onClick={handleSaveInward} disabled={isSaving} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {isSaving && <Spinner size="xs" variant="white" />}
+            {isSaving ? 'Saving...' : 'Save Inward Entry'}
+          </button>
         </div>
       </div>
     </div>

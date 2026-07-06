@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import {
   LayoutDashboard,
   Workflow,
@@ -13,16 +13,17 @@ import {
   Printer,
   Eye,
   EyeOff,
-  Smartphone,
-  Loader2
+  Smartphone
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTickets, useVendors } from './api/hooks';
+import Spinner from './components/Spinner';
 import './index.css';
 import './modal.css';
 import './workflow.css';
 import './advance-modal.css';
 import './ledgers.css';
+import { generateTicketPDF } from './utils/pdfGenerator';
 import './login.css';
 import './mobile.css';
 
@@ -82,6 +83,7 @@ function App() {
   });
 
   const [userRole, setUserRole] = useState(localStorage.getItem('userRole') || null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
@@ -167,7 +169,7 @@ function App() {
     }
 
     const finalizeSave = (imgData = null) => {
-      const newActivity = {
+      const optimisticTicket = {
         id: newId,
         name: formData.customerName,
         contactNumber: formData.contactNumber || 'N/A',
@@ -183,8 +185,29 @@ function App() {
         inwardImageURL: imgData
       };
 
+      // Optimistically add ticket to the top of the list instantly
+      const previousTickets = queryClient.getQueryData(['tickets']);
+      queryClient.setQueryData(['tickets'], (old = []) => [optimisticTicket, ...old]);
 
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      // Close modal and reset form immediately for snappy UX
+      setIsModalOpen(false);
+      setFormData({
+        customerName: '',
+        contactNumber: '',
+        email: '',
+        productName: '',
+        category: 'Motherboard',
+        serviceVendor: 'ASUS Service',
+        serialNumber: '',
+        description: '',
+        image: null,
+        inwardDate: getTodayDate(),
+        rma: null
+      });
+
+      setIsSaving(false);
+
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
       axios.post(`${baseUrl}/tickets`, {
         rma: newRma,
         customerName: formData.customerName,
@@ -199,27 +222,17 @@ function App() {
         serviceVendor: formData.serviceVendor,
         inwardImageURL: imgData
       }).then(() => {
+        // Refresh from server to get real ID and server-side data
         queryClient.invalidateQueries({ queryKey: ['tickets'] });
-        setIsModalOpen(false);
-        setFormData({
-          customerName: '',
-          contactNumber: '',
-          email: '',
-          productName: '',
-          category: 'Motherboard',
-          serviceVendor: 'ASUS Service',
-          serialNumber: '',
-          description: '',
-          image: null,
-          inwardDate: getTodayDate(),
-          rma: null
-        });
       }).catch(err => {
         console.error("Failed to create ticket:", err);
-        alert("Failed to create ticket");
+        // Rollback optimistic update
+        queryClient.setQueryData(['tickets'], previousTickets);
+        alert("Failed to save ticket. Please try again.");
       });
     };
 
+    setIsSaving(true);
     if (formData.image) {
       const reader = new FileReader();
       reader.onload = function(event) {
@@ -284,7 +297,14 @@ function App() {
       }
     }
 
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+    
+    // Optimistic Update: instantly update the UI cache
+    queryClient.setQueryData(['tickets'], (old) => {
+      if (!old) return old;
+      return old.map(t => t.id === advancingItem.id ? { ...t, ...updateData, statusClass: newClass } : t);
+    });
+
     axios.put(`${baseUrl}/tickets/${advancingItem.id}/status`, updateData)
       .then(() => {
         queryClient.invalidateQueries({ queryKey: ['tickets'] });
@@ -296,77 +316,43 @@ function App() {
     // Generate PDF and send WhatsApp ONLY if transitioning FROM CUSTOMER INWARD
     if (advancingItem.status === 'CUSTOMER INWARD') {
       const itemToSend = updatedItem || advancingItem;
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+      
+      // 1. Send PDF to Customer
       axios.post(`${baseUrl}/whatsapp/send-pdf`, { ticketData: itemToSend, message: customMessage })
-        .then(res => console.log("WhatsApp PDF Sent:", res.data))
-        .catch(err => console.error("Failed to send WhatsApp PDF:", err));
+        .then(res => console.log("WhatsApp PDF Sent to Customer:", res.data))
+        .catch(err => {
+          console.error("Failed to send WhatsApp PDF to Customer:", err);
+          alert("Customer WhatsApp failed: " + (err.response?.data?.error || err.message));
+        });
 
-      const doc = new jsPDF();
-      doc.setFillColor(15, 23, 42);
-      doc.rect(0, 0, 210, 40, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(28);
-      doc.setFont("helvetica", "bold");
-      doc.text("RMA Flow", 20, 22);
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "normal");
-      doc.text("CUSTOMER INWARD TICKET", 20, 32);
-      doc.setFont("helvetica", "bold");
-      doc.text(`TICKET #: ${itemToSend.rma}`, 140, 27);
-      
-      let yPos = 60;
-      const drawField = (label, value, x, y) => {
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(100, 116, 139);
-        doc.text(label.toUpperCase(), x, y);
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(15, 23, 42);
-        const textVal = value ? value.toString() : "N/A";
-        const splitVal = doc.splitTextToSize(textVal, 80);
-        doc.text(splitVal, x, y + 6);
-        return splitVal.length * 6;
-      };
-      
-      drawField("Customer Name", itemToSend.name, 20, yPos);
-      drawField("Contact Number", itemToSend.contactNumber, 110, yPos);
-      yPos += 20;
-      drawField("Email Address", itemToSend.email, 20, yPos);
-      drawField("Inward Date", itemToSend.date, 110, yPos);
-      yPos += 20;
-      doc.setDrawColor(226, 232, 240);
-      doc.line(20, yPos, 190, yPos);
-      yPos += 15;
-      drawField("Product Model", itemToSend.product, 20, yPos);
-      drawField("Category", itemToSend.category, 110, yPos);
-      yPos += 20;
-      drawField("Service Vendor", itemToSend.serviceVendor, 20, yPos);
-      drawField("Serial Number", itemToSend.serialNumber, 110, yPos);
-      yPos += 20;
-      
-      if (itemToSend.inwardImageURL) {
-        try {
-          doc.setFontSize(10);
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(100, 116, 139);
-          doc.text("ATTACHED IMAGE", 20, yPos);
-          yPos += 5;
-          doc.addImage(itemToSend.inwardImageURL, 'JPEG', 20, yPos, 100, 100, undefined, 'FAST');
-        } catch(e) {
-          console.error("Failed to add image to PDF", e);
-        }
+      // 2. Send PDF to Vendor
+      const vendorObj = vendors.find(v => v.companyName === advancingItem.serviceVendor);
+      if (vendorObj && vendorObj.phoneNumber) {
+        axios.post(`${baseUrl}/whatsapp/send-pdf`, { ticketData: itemToSend, message: customMessage, targetPhone: vendorObj.phoneNumber })
+          .then(res => console.log("WhatsApp PDF Sent to Vendor:", res.data))
+          .catch(err => {
+            console.error("Failed to send WhatsApp PDF to Vendor:", err);
+            alert("Vendor WhatsApp failed: " + (err.response?.data?.error || err.message));
+          });
+      } else {
+        console.warn("Vendor phone number not found for PDF dispatch:", advancingItem.serviceVendor);
       }
-      doc.save(`${itemToSend.rma}_Inward_Ticket.pdf`);
+
+      // The WhatsApp PDF is generated and sent by the backend.
+      // We no longer auto-download the PDF on the frontend here.
     } else if (advancingItem.status === 'VENDOR INWARD') {
       // Send text message to the vendor
       const vendorObj = vendors.find(v => v.companyName === advancingItem.serviceVendor);
       if (vendorObj && vendorObj.phoneNumber) {
         const vendorText = `*RMA Ticket Update*\nProduct: ${advancingItem.product}\nCustomer: ${advancingItem.name}\nCategory: ${advancingItem.category}\nOld Serial Number: ${advancingItem.serialNumber || 'N/A'}\nNew Serial Number: ${newSerialNumber || 'N/A'}\nCourier Charge: ${courierCharge || 'N/A'}\nTransition Date: ${formattedDate}`;
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
         axios.post(`${baseUrl}/whatsapp/send-text`, { vendorPhone: vendorObj.phoneNumber, text: vendorText })
           .then(res => console.log("Vendor WhatsApp Text Sent:", res.data))
-          .catch(err => console.error("Failed to send Vendor WhatsApp text:", err));
+          .catch(err => {
+            console.error("Failed to send Vendor WhatsApp text:", err);
+            alert("Vendor WhatsApp text failed: " + (err.response?.data?.error || err.message));
+          });
       } else {
         console.warn("Vendor phone number not found for:", advancingItem.serviceVendor);
       }
@@ -377,116 +363,36 @@ function App() {
   };
 
   const handleGenerateReport = (item) => {
-    const doc = new jsPDF();
-    doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, 210, 40, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(28);
-    doc.setFont("helvetica", "bold");
-    doc.text("RMA Flow", 20, 22);
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text("FINAL REPORT", 20, 32);
-    doc.setFont("helvetica", "bold");
-    doc.text(`TICKET #: ${item.rma}`, 140, 27);
-    
-    let yPos = 60;
-    const drawField = (label, value, x, y) => {
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(100, 116, 139);
-      doc.text(label.toUpperCase(), x, y);
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(15, 23, 42);
-      const textVal = value ? value.toString() : "N/A";
-      const splitVal = doc.splitTextToSize(textVal, 80);
-      doc.text(splitVal, x, y + 6);
-      return splitVal.length * 6;
-    };
-    
-    drawField("Customer Name", item.name, 20, yPos);
-    drawField("Contact Number", item.contactNumber, 110, yPos);
-    yPos += 20;
-    drawField("Email Address", item.email, 20, yPos);
-    drawField("Completion Date", item.date, 110, yPos);
-    yPos += 20;
-    doc.setDrawColor(226, 232, 240);
-    doc.line(20, yPos, 190, yPos);
-    yPos += 15;
-    drawField("Product Model", item.product, 20, yPos);
-    drawField("Category", item.category, 110, yPos);
-    yPos += 20;
-    drawField("Service Vendor", item.serviceVendor, 20, yPos);
-    yPos += 20;
-    drawField("Original Serial #", item.oldSerialNumber || item.serialNumber, 20, yPos);
-    drawField("New Replacement Serial #", item.serialNumber, 110, yPos);
-    yPos += 30;
+    // 1. Generate and download/print the highly-styled PDF
+    generateTicketPDF('COMPLETED', item);
 
-    if (item.inwardImageURL) {
-      try {
-        if (yPos > 200) { doc.addPage(); yPos = 20; }
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(100, 116, 139);
-        doc.text("CUSTOMER INWARD IMAGE", 20, yPos);
-        yPos += 5;
-        doc.addImage(item.inwardImageURL, 'JPEG', 20, yPos, 100, 100, undefined, 'FAST');
-        yPos += 110;
-      } catch(e) {
-        console.error("Failed to add image to PDF", e);
-      }
-    }
-    
-    if (item.outwardImageURL) {
-      try {
-        if (yPos > 200) { doc.addPage(); yPos = 20; }
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(100, 116, 139);
-        doc.text("SHIPPING SLIP IMAGE", 20, yPos);
-        yPos += 5;
-        doc.addImage(item.outwardImageURL, 'JPEG', 20, yPos, 100, 100, undefined, 'FAST');
-        yPos += 110;
-      } catch(e) {
-        console.error("Failed to add image to PDF", e);
-      }
-    }
+    // 2. Only mark as completed and send WhatsApp if it's not already completed
+    if (item.status !== 'COMPLETED') {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+      
+      // Optimistic update
+      queryClient.setQueryData(['tickets'], (old) => {
+        if (!old) return old;
+        return old.map(t => t.id === item.id ? { ...t, status: 'COMPLETED', statusClass: 'bg-green-dark' } : t);
+      });
 
-    if (item.vendorInwardImageURL) {
-      try {
-        if (yPos > 200) { doc.addPage(); yPos = 20; }
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(100, 116, 139);
-        doc.text("REPLACEMENT PRODUCT IMAGE", 20, yPos);
-        yPos += 5;
-        doc.addImage(item.vendorInwardImageURL, 'JPEG', 20, yPos, 100, 100, undefined, 'FAST');
-        yPos += 110;
-      } catch(e) {
-        console.error("Failed to add image to PDF", e);
-      }
-    }
-    
-    window.open(doc.output('bloburl'), '_blank');
-    doc.save(`${item.rma}_Final_Report.pdf`);
-
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-    
-    // Mark as completed
-    axios.put(`${baseUrl}/tickets/${item.id}/status`, { status: 'COMPLETED', date: getTodayDate() })
-      .then(() => {
-        queryClient.invalidateQueries({ queryKey: ['tickets'] });
-        // After successfully marking completed, send WhatsApp to customer
-        const payloadItem = { ...item, customerName: item.name };
-        axios.post(`${baseUrl}/whatsapp/send-pdf`, { 
-          ticketData: payloadItem, 
-          message: `Hello ${item.name}, your RMA ticket (${item.rma}) has been completed. Please find your final replacement report attached.` 
+      axios.put(`${baseUrl}/tickets/${item.id}/status`, { status: 'COMPLETED', date: getTodayDate() })
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ['tickets'] });
+          // After successfully marking completed, send WhatsApp to customer
+          const payloadItem = { ...item, customerName: item.name };
+          axios.post(`${baseUrl}/whatsapp/send-pdf`, { 
+            ticketData: payloadItem, 
+            message: `Hello ${item.name}, your RMA ticket (${item.rma}) has been completed. Please find your final replacement report attached.` 
+          })
+            .then(res => console.log("Final Report WhatsApp Sent:", res.data))
+            .catch(err => {
+              console.error("Failed to send WhatsApp Final Report:", err);
+              alert("WhatsApp Final Report failed: " + (err.response?.data?.error || err.message));
+            });
         })
-          .then(res => console.log("Final Report WhatsApp Sent:", res.data))
-          .catch(err => console.error("Failed to send WhatsApp Final Report:", err));
-      })
-      .catch(err => console.error("Failed to mark completed:", err));
+        .catch(err => console.error("Failed to mark completed:", err));
+    }
   };
 
   const handleExportData = () => {
@@ -532,10 +438,10 @@ function App() {
     e.preventDefault();
     setLoginError('');
     setIsLoggingIn(true);
-    const email = e.target[0].value;
-    const password = e.target[1].value;
+    const email = e.target.email.value.trim();
+    const password = e.target.password.value;
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
       const res = await axios.post(`${baseUrl}/auth/login`, { email, password });
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('userRole', res.data.user.role);
@@ -575,7 +481,7 @@ function App() {
             )}
             <div className="login-input-group">
               <label>Email Address</label>
-              <input type="email" className="login-input" placeholder="admin@rmaflow.com" required defaultValue="admin@rmaflow.com" />
+              <input type="email" name="email" className="login-input" placeholder="Enter your email" required />
             </div>
 
             <div className="login-input-group">
@@ -583,10 +489,10 @@ function App() {
               <div style={{ position: 'relative' }}>
                 <input 
                   type={showPassword ? "text" : "password"} 
+                  name="password"
                   className="login-input" 
                   placeholder="••••••••" 
                   required 
-                  defaultValue="admin123" 
                   style={{ paddingRight: '40px' }}
                 />
                 <button 
@@ -600,7 +506,7 @@ function App() {
             </div>
 
             <button type="submit" className="login-btn" disabled={isLoggingIn} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
-              {isLoggingIn ? <Loader2 size={20} className="animate-spin" /> : 'Sign In'}
+              {isLoggingIn ? <Spinner size="sm" variant="white" /> : 'Sign In'}
             </button>
           </form>
         </div>
@@ -787,6 +693,7 @@ function App() {
           setFormData={setFormData}
           handleInputChange={handleInputChange}
           handleSaveInward={handleSaveInward}
+          isSaving={isSaving}
         />
       )}
 

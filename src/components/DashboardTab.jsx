@@ -1,16 +1,13 @@
 import React from 'react';
-import { Download, ClipboardList, Truck, Package, UserCheck, History, Loader2 } from 'lucide-react';
+import { Download, ClipboardList, Truck, Package, UserCheck, History } from 'lucide-react';
 import { useTickets } from '../api/hooks';
+import { SkeletonLoader } from './Spinner';
 
 export default function DashboardTab({ handleExportData, setViewingItem }) {
   const { data: recentActivities = [], isLoading } = useTickets();
 
   if (isLoading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '40px' }}>
-        <Loader2 className="lucide-spin" size={32} color="#64748b" />
-      </div>
-    );
+    return <SkeletonLoader rows={6} />;
   }
 
   return (

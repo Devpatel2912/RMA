@@ -1,270 +1,401 @@
 import jsPDF from 'jspdf';
 
+/**
+ * Stage-aware fields per stage:
+ *
+ * CUSTOMER INWARD  → inwardImageURL        | shows description
+ * VENDOR OUTWARD   → outwardImageURL       | shows inward image (reference) + docket image
+ * VENDOR INWARD    → vendorInwardImageURL  | shows old serial + new serial + courier charge
+ * CUSTOMER OUTWARD → outwardImageURL       | shows new serial + courier charge
+ * COMPLETED        → all images            | full summary
+ */
 export const generateTicketPDF = (stageName, ticket) => {
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'pt',
-    format: 'a4'
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
+  const pageW = 595.28;
+  const margin = 35;
+  const cW = pageW - margin * 2;
+
+  // ─── Color Palette ─────────────────────────────────────────
+  const navy   = [13, 42, 79];
+  const blue   = [41, 98, 163];
+  const lBlue  = [235, 242, 252];
+  const white  = [255, 255, 255];
+  const dkText = [30, 41, 59];
+  const mdText = [71, 85, 105];
+  const border = [203, 213, 225];
+
+  // ─── Helpers ───────────────────────────────────────────────
+  const rgb   = (c) => doc.setTextColor(c[0], c[1], c[2]);
+  const fill  = (c) => doc.setFillColor(c[0], c[1], c[2]);
+  const strk  = (c, w = 0.5) => { doc.setDrawColor(c[0], c[1], c[2]); doc.setLineWidth(w); };
+  const fRect = (x, y, w, h) => doc.rect(x, y, w, h, 'F');
+  const fdRect = (x, y, w, h) => doc.rect(x, y, w, h, 'FD');
+  const sRect = (x, y, w, h) => doc.rect(x, y, w, h, 'S');
+  const fRound = (x, y, w, h, r) => doc.roundedRect(x, y, w, h, r, r, 'F');
+  const fdRound = (x, y, w, h, r) => doc.roundedRect(x, y, w, h, r, r, 'FD');
+  const ln    = (x1, y1, x2, y2) => doc.line(x1, y1, x2, y2);
+  const circ  = (x, y, r) => doc.ellipse(x, y, r, r, 'F');
+  const font  = (style, size) => { doc.setFont('helvetica', style); if (size) doc.setFontSize(size); };
+
+  let y = margin;
+
+  // ═══════════════════════════════════════════════════════════
+  // HEADER
+  // ═══════════════════════════════════════════════════════════
+
+  // Blue decorative corner (top right)
+  fill(navy);
+  doc.triangle(pageW - margin, margin, pageW - margin, margin + 90, pageW - margin - 70, margin, 'F');
+  fill(blue);
+  doc.triangle(pageW - margin, margin + 10, pageW - margin, margin + 78, pageW - margin - 52, margin + 10, 'F');
+
+  // AVXPERTS "A" Triangle Logo
+  const lx = margin, ly = y + 4;
+  fill(navy); doc.triangle(lx + 26, ly, lx + 2, ly + 42, lx + 50, ly + 42, 'F');
+  fill(white); doc.triangle(lx + 26, ly + 11, lx + 10, ly + 38, lx + 42, ly + 38, 'F');
+  fill(navy); fRect(lx + 14, ly + 26, 24, 5);
+
+  font('bold', 20); rgb(navy);
+  doc.text('AVXPERTS', lx, ly + 58);
+  font('normal', 7); rgb(blue);
+  doc.text('\u2014  EXPERT CARE. TRUSTED SERVICE.  \u2014', lx, ly + 71);
+
+  // Address info (right)
+  const ax = pageW / 2 + 10, ay = y + 6;
+  fill(navy); circ(ax + 5, ay + 5, 5);
+  font('normal', 8); rgb(dkText);
+  doc.text('16, Shiv Shyam Icon,', ax + 16, ay + 8);
+  doc.text('Nr. Shree Ram Shadan, Karamsad,', ax + 16, ay + 20);
+  doc.text('Anand, Gujarat 388325', ax + 16, ay + 32);
+  fill(navy); circ(ax + 5, ay + 46, 5);
+  doc.text('+91 7990103273', ax + 16, ay + 49);
+  fill(navy); circ(ax + 5, ay + 62, 5);
+  doc.text('info@avxperts.co.in', ax + 16, ay + 65);
+
+  y = ly + 83;
+  strk(border, 0.4); ln(margin, y, pageW - margin, y);
+  y += 12;
+
+  // ═══════════════════════════════════════════════════════════
+  // SERVICE RECEIPT BANNER
+  // ═══════════════════════════════════════════════════════════
+  fill(navy); fRect(margin, y, cW, 32);
+  font('bold', 15); rgb(white);
+  doc.text('SERVICE RECEIPT', margin + 14, y + 21);
+  fill(blue); fRound(margin + cW - 86, y + 6, 78, 20, 3);
+  font('bold', 8); rgb(white);
+  doc.text('ORIGINAL', margin + cW - 47, y + 19, { align: 'center' });
+  y += 32 + 18;
+
+  // ═══════════════════════════════════════════════════════════
+  // RMA / DATE / STAGE ROW
+  // ═══════════════════════════════════════════════════════════
+  fill(navy); circ(margin + 14, y + 12, 12);
+  font('bold', 9); rgb(white); doc.text('\u2261', margin + 9, y + 16);
+
+  font('bold', 8.5); rgb(navy);
+  doc.text('RMA No.', margin + 32, y + 8);
+  doc.text(':', margin + 74, y + 8);
+  font('normal', 8.5); rgb(dkText);
+  doc.text(ticket.rma || 'N/A', margin + 80, y + 8);
+
+  font('bold', 8.5); rgb(navy);
+  doc.text('Date', margin + 32, y + 22);
+  doc.text(':', margin + 74, y + 22);
+  font('normal', 8.5); rgb(dkText);
+  doc.text(ticket.date || 'N/A', margin + 80, y + 22);
+
+  const dvX = pageW / 2 - 15;
+  strk(border, 0.5); ln(dvX, y - 2, dvX, y + 34);
+
+  font('bold', 8.5); rgb(navy);
+  doc.text('Stage', dvX + 15, y + 8);
+
+  const stage = (stageName || ticket.status || '').toUpperCase();
+  const sc = {
+    'CUSTOMER INWARD':  { bg: [219,234,254], bd: [147,197,253], tx: [30,64,175] },
+    'VENDOR OUTWARD':   { bg: [254,243,199], bd: [253,224,71],  tx: [146,64,14] },
+    'VENDOR INWARD':    { bg: [237,233,254], bd: [196,181,253], tx: [109,40,217] },
+    'CUSTOMER OUTWARD': { bg: [209,250,229], bd: [110,231,183], tx: [6,95,70] },
+    'COMPLETED':        { bg: [209,250,229], bd: [110,231,183], tx: [6,95,70] },
+  }[stage] || { bg: [241,245,249], bd: border, tx: mdText };
+
+  fill(sc.bg); strk(sc.bd, 0.6);
+  doc.roundedRect(dvX + 60, y, 120, 18, 4, 4, 'FD');
+  font('bold', 7.5); rgb(sc.tx);
+  doc.text(stage, dvX + 120, y + 12, { align: 'center' });
+
+  y += 40;
+  strk(border, 0.3); ln(margin, y, pageW - margin, y);
+  y += 14;
+
+  // ═══════════════════════════════════════════════════════════
+  // CUSTOMER DETAILS
+  // ═══════════════════════════════════════════════════════════
+  fill(navy); circ(margin + 10, y + 8, 9);
+  font('bold', 8); rgb(white); doc.text('\u25A0', margin + 6, y + 11);
+  font('bold', 11); rgb(navy);
+  doc.text('CUSTOMER DETAILS', margin + 24, y + 12);
+  y += 22;
+
+  const custH = 32;
+  fill(white); strk(border, 0.5);
+  doc.roundedRect(margin, y, cW, custH, 4, 4, 'FD');
+
+  const custName = ticket.customerName || ticket.name || 'N/A';
+  const c1 = margin + 14, c2 = margin + cW / 3 + 10, c3 = margin + (cW * 2) / 3 + 10;
+
+  font('bold', 8.5); rgb(navy); doc.text('Name:', c1, y + 13);
+  font('normal', 8.5); rgb(dkText); doc.text(custName.substring(0, 22), c1 + 34, y + 13);
+
+  strk(border, 0.4); ln(margin + cW / 3 + 2, y + 5, margin + cW / 3 + 2, y + custH - 5);
+  font('bold', 8.5); rgb(navy); doc.text('Contact:', c2, y + 13);
+  font('normal', 8.5); rgb(dkText); doc.text(ticket.contactNumber || 'N/A', c2 + 42, y + 13);
+
+  strk(border, 0.4); ln(margin + (cW * 2) / 3 + 2, y + 5, margin + (cW * 2) / 3 + 2, y + custH - 5);
+  font('bold', 8.5); rgb(navy); doc.text('Email:', c3, y + 13);
+  const em = ticket.email || 'N/A';
+  font('normal', 8.5); rgb(dkText); doc.text(em.length > 18 ? em.substring(0, 18) + '...' : em, c3 + 32, y + 13);
+
+  y += custH + 16;
+
+  // ═══════════════════════════════════════════════════════════
+  // PRODUCT INFORMATION TABLE
+  // ═══════════════════════════════════════════════════════════
+  fill(navy); circ(margin + 10, y + 8, 9);
+  font('bold', 8); rgb(white); doc.text('\u25CF', margin + 7, y + 11);
+  font('bold', 11); rgb(navy);
+  doc.text('PRODUCT INFORMATION', margin + 24, y + 12);
+  y += 22;
+
+  const tX = [margin, margin + 40, margin + 180, margin + 300, margin + 400, margin + cW];
+  const tW = [40, 140, 120, 100, cW - 365];
+  const tHd = ['Sr.', 'Product Name', 'Category', 'Serial No', 'Vendor'];
+
+  fill(navy); fRect(margin, y, cW, 24);
+  font('bold', 8.5); rgb(white);
+  tHd.forEach((h, i) => doc.text(h, tX[i] + tW[i] / 2, y + 16, { align: 'center' }));
+  y += 24;
+
+  fill(white); strk(border, 0.5); sRect(margin, y, cW, 26);
+  for (let i = 1; i < tX.length - 1; i++) { strk(border, 0.4); ln(tX[i], y, tX[i], y + 26); }
+
+  const serialDisplay = stage === 'VENDOR INWARD' || stage === 'CUSTOMER OUTWARD'
+    ? (ticket.serialNumber || 'N/A')   // new serial after replacement
+    : (ticket.serialNumber || 'N/A');
+
+  const rowD = ['1', ticket.product || 'N/A', ticket.category || 'N/A', serialDisplay, ticket.serviceVendor || 'N/A'];
+  font('normal', 8.5); rgb(dkText);
+  rowD.forEach((d, i) => {
+    const t = doc.splitTextToSize(String(d), tW[i] - 8)[0];
+    doc.text(t, tX[i] + tW[i] / 2, y + 17, { align: 'center' });
   });
-  
-  // A4 size in points: 595.28 x 841.89
-  const startX = 30;
-  const startY = 30;
-  const width = 535;
-  
-  // Helper Functions
-  const drawLine = (x1, y1, x2, y2) => {
-    doc.setDrawColor(0);
-    doc.line(x1, y1, x2, y2);
-  };
+  y += 26 + 16;
 
-  doc.setLineWidth(1);
+  // ═══════════════════════════════════════════════════════════
+  // STAGE-SPECIFIC FIELDS SECTION
+  // ═══════════════════════════════════════════════════════════
 
-  // Top header
-  doc.setFillColor(0, 0, 0);
-  doc.rect(startX, startY, 80, 50, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text("AVXPERTS", startX + 40, startY + 30, { align: 'center' });
+  // Build extra fields based on stage
+  const extraFields = [];
+  let imageLabel = null;
+  let imageURL = null;
+  let image2Label = null;
+  let image2URL = null;
 
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(20);
-  doc.text("AVXPERTS", startX + 90 + (width - 90)/2, startY + 15, { align: 'center' });
-  
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text("16, Shiv Shyam Icon, Nr. Shree Ram Shadan, Karamsad, Anand, Gujarat 388325, India", startX + 90 + (width - 90)/2, startY + 30, { align: 'center' });
-  doc.text("Mo. +91 7990103273 | Email. info@avxperts.co.in", startX + 90 + (width - 90)/2, startY + 42, { align: 'center' });
+  if (stage === 'CUSTOMER INWARD') {
+    extraFields.push({ label: 'Problem Description', value: ticket.description || 'N/A', fullWidth: true });
+    imageLabel = 'Customer Inward Image';
+    imageURL = ticket.inwardImageURL;
 
-  // Outer border
-  const boxY = startY + 55;
-  doc.rect(startX, boxY, width, 700);
+  } else if (stage === 'VENDOR OUTWARD') {
+    extraFields.push({ label: 'Outward Date', value: ticket.date || 'N/A' });
+    extraFields.push({ label: 'Service Vendor', value: ticket.serviceVendor || 'N/A' });
+    extraFields.push({ label: 'Problem Description', value: ticket.description || 'N/A', fullWidth: true });
+    imageLabel = 'Inward Reference Image';
+    imageURL = ticket.inwardImageURL;
+    image2Label = 'Docket / Shipping Image';
+    image2URL = ticket.outwardImageURL;
 
-  // Titles Row
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.text("Debit Memo", startX + 5, boxY + 12);
-  doc.setFontSize(12);
-  doc.text("TAX INVOICE", startX + width / 2, boxY + 14, { align: 'center' });
-  doc.setFontSize(9);
-  doc.text("Original", startX + width - 5, boxY + 12, { align: 'right' });
-  drawLine(startX, boxY + 18, startX + width, boxY + 18);
+  } else if (stage === 'VENDOR INWARD') {
+    extraFields.push({ label: 'Old Serial Number', value: ticket.oldSerialNumber || ticket.serialNumber || 'N/A' });
+    extraFields.push({ label: 'New Serial Number', value: ticket.serialNumber || 'N/A' });
+    extraFields.push({ label: 'Courier Charge', value: ticket.courierCharge || 'N/A' });
+    extraFields.push({ label: 'Transition Date', value: ticket.date || 'N/A' });
+    imageLabel = 'Replacement Product Image';
+    imageURL = ticket.vendorInwardImageURL;
 
-  // Metadata Section
-  let rowY = boxY + 18;
-  
-  doc.setFontSize(8);
-  doc.text("Invoice No. :", startX + 5, rowY + 12);
-  doc.setFont("helvetica", "normal");
-  doc.text(ticket.rma || "N/A", startX + 70, rowY + 12);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("P O No", startX + 220, rowY + 12);
-  doc.text(":", startX + 260, rowY + 12);
-  
-  doc.text("Challan No", startX + 380, rowY + 12);
-  doc.text(":", startX + 440, rowY + 12);
-  
-  drawLine(startX, rowY + 18, startX + width, rowY + 18);
-  rowY += 18;
+  } else if (stage === 'CUSTOMER OUTWARD') {
+    extraFields.push({ label: 'New Serial Number', value: ticket.serialNumber || 'N/A' });
+    extraFields.push({ label: 'Courier Charge', value: ticket.courierCharge || 'N/A' });
+    extraFields.push({ label: 'Completion Date', value: ticket.date || 'N/A' });
+    imageLabel = 'Outward Product Image';
+    imageURL = ticket.outwardImageURL || ticket.vendorInwardImageURL;
 
-  doc.setFont("helvetica", "bold");
-  doc.text("Date", startX + 5, rowY + 12);
-  doc.text(":", startX + 60, rowY + 12);
-  doc.setFont("helvetica", "normal");
-  doc.text(ticket.date || "N/A", startX + 70, rowY + 12);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("P O Date", startX + 220, rowY + 12);
-  doc.text(":", startX + 260, rowY + 12);
-  
-  doc.text("Challan Date :", startX + 380, rowY + 12);
-  
-  drawLine(startX, rowY + 18, startX + width, rowY + 18);
-  rowY += 18;
+  } else {
+    // COMPLETED / fallback
+    extraFields.push({ label: 'Completion Date', value: ticket.date || 'N/A' });
+    extraFields.push({ label: 'Courier Charge', value: ticket.courierCharge || 'N/A' });
+    imageLabel = 'Inward Image';
+    imageURL = ticket.inwardImageURL;
+    image2Label = 'Outward Image';
+    image2URL = ticket.outwardImageURL || ticket.vendorInwardImageURL;
+  }
 
-  doc.text("Driver Name :", startX + 5, rowY + 12);
-  doc.text("Vehicle No :", startX + 220, rowY + 12);
-  doc.text("E-Way Bill :", startX + 380, rowY + 12);
+  // Render extra fields section if any
+  if (extraFields.length > 0) {
+    fill(navy); circ(margin + 10, y + 8, 9);
+    font('bold', 8); rgb(white); doc.text('\u2699', margin + 7, y + 12);
+    font('bold', 11); rgb(navy);
+    doc.text(stage === 'CUSTOMER INWARD' ? 'PROBLEM DESCRIPTION' : 'ADDITIONAL DETAILS', margin + 24, y + 12);
+    y += 22;
 
-  drawLine(startX, rowY + 18, startX + width, rowY + 18);
-  rowY += 18;
+    // Single fullWidth field (description)
+    const fullW = extraFields.find(f => f.fullWidth);
+    const others = extraFields.filter(f => !f.fullWidth);
 
-  // Address section split
-  const addressHeight = 85;
-  drawLine(startX + width / 2, rowY, startX + width / 2, rowY + addressHeight);
-  
-  const customerName = ticket.customerName || ticket.name || 'Customer';
-  const customerPhone = ticket.contactNumber || '';
+    if (others.length > 0) {
+      const maxCols = 3;
+      const fieldH = 34;
 
-  // Billed To
-  doc.text("Billed To :", startX + 5, rowY + 12);
-  doc.text(customerName, startX + 5, rowY + 27);
-  doc.setFont("helvetica", "normal");
-  doc.text("Address details unavailable for RMA", startX + 5, rowY + 42);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("Place of Supply :", startX + 5, rowY + 67);
-  doc.text("GSTIN No. :", startX + 5, rowY + 79);
-  doc.text("Mo. : " + customerPhone, startX + 130, rowY + 79);
+      // Split into rows of maxCols
+      const rows = [];
+      for (let i = 0; i < others.length; i += maxCols) {
+        rows.push(others.slice(i, i + maxCols));
+      }
 
-  // Shipped To
-  const rightX = startX + width / 2 + 5;
-  doc.text("Shipped To :", rightX, rowY + 12);
-  doc.text(customerName, rightX, rowY + 27);
-  doc.setFont("helvetica", "normal");
-  doc.text("Address details unavailable for RMA", rightX, rowY + 42);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("Place of Supply :", rightX, rowY + 67);
-  doc.text("GSTIN No. :", rightX, rowY + 79);
-  doc.text("Mo. : " + customerPhone, rightX + 130, rowY + 79);
+      rows.forEach((rowFields) => {
+        const colCount = rowFields.length;
+        const colW = cW / colCount;
 
-  rowY += addressHeight;
-  drawLine(startX, rowY, startX + width, rowY);
+        fill(white); strk(border, 0.5);
+        fdRound(margin, y, cW, fieldH, 4);
 
-  // Items Table Header
-  const colX = [startX, startX + 30, startX + 260, startX + 320, startX + 350, startX + 380, startX + 430, startX + 470, startX + width];
-  
-  const drawColLines = (y1, y2) => {
-    for (let i = 1; i < colX.length - 1; i++) {
-      drawLine(colX[i], y1, colX[i], y2);
+        rowFields.forEach((f, i) => {
+          const fx = margin + i * colW + 10;
+          if (i > 0) { strk(border, 0.4); ln(margin + i * colW, y + 5, margin + i * colW, y + fieldH - 5); }
+          font('bold', 7.5); rgb(mdText); doc.text(f.label.toUpperCase(), fx, y + 12);
+          font('bold', 9.5); rgb(dkText); doc.text(String(f.value).substring(0, 26), fx, y + 27);
+        });
+
+        y += fieldH + 6;
+      });
+
+      y += 2;
     }
+
+    if (fullW) {
+      const descText = fullW.value;
+      const descLines = doc.splitTextToSize(descText, cW - 22);
+      const descH = Math.max(50, descLines.length * 13 + 22);
+      fill(white); strk(border, 0.5);
+      doc.roundedRect(margin, y, cW, descH, 4, 4, 'FD');
+      font('normal', 8.5); rgb(dkText);
+      doc.text(descLines, margin + 10, y + 15);
+      y += descH + 8;
+    }
+
+    y += 8;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // UPLOADED IMAGE(S) SECTION
+  // ═══════════════════════════════════════════════════════════
+  const addImageSection = (label, url, startY) => {
+    if (!url) return startY;
+
+    fill(navy); circ(margin + 10, startY + 8, 9);
+    font('bold', 8); rgb(white); doc.text('\u25B2', margin + 7, startY + 11);
+    font('bold', 11); rgb(navy);
+    doc.text(label.toUpperCase(), margin + 24, startY + 12);
+    startY += 22;
+
+    try {
+      const maxW = cW;
+      const maxH = 180;
+      // Draw border box for image
+      fill(white); strk(border, 0.5);
+      doc.roundedRect(margin, startY, maxW, maxH, 4, 4, 'FD');
+      doc.addImage(url, 'JPEG', margin + 4, startY + 4, maxW - 8, maxH - 8, undefined, 'FAST');
+    } catch (e) {
+      font('normal', 8); rgb(mdText);
+      doc.text('Image could not be rendered.', margin + 10, startY + 20);
+    }
+    return startY + 185 + 14;
   };
 
-  doc.setFontSize(9);
-  
-  const centerText = (text, x, width, y) => {
-    doc.text(text, x + width / 2, y, { align: 'center' });
-  };
+  if (imageURL) y = addImageSection(imageLabel, imageURL, y);
+  if (image2URL) y = addImageSection(image2Label, image2URL, y);
 
-  centerText("Sr No", colX[0], 30, rowY + 12);
-  centerText("Product Name", colX[1], 230, rowY + 12);
-  centerText("HSN / SAC", colX[2], 60, rowY + 12);
-  centerText("Qty", colX[3], 30, rowY + 12);
-  centerText("Unit", colX[4], 30, rowY + 12);
-  centerText("Rate", colX[5], 50, rowY + 12);
-  centerText("GST %", colX[6], 40, rowY + 12);
-  centerText("Amount", colX[7], 65, rowY + 12);
+  // ═══════════════════════════════════════════════════════════
+  // TERMS & CONDITIONS + SIGNATURE
+  // ═══════════════════════════════════════════════════════════
+  const tcH = 95;
+  // If not enough space, add a new page
+  if (y + tcH + 80 > 841) {
+    doc.addPage();
+    y = margin;
+  }
 
-  drawLine(startX, rowY + 20, startX + width, rowY + 20);
-  
-  // Items data
-  const itemsStartY = rowY + 20;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  
-  centerText("1", colX[0], 30, itemsStartY + 12);
-  
-  let productDesc = `${ticket.product || 'Product'}`;
-  if (ticket.category) productDesc += `\nCategory: ${ticket.category}`;
-  if (ticket.serialNumber) productDesc += `\nSr No: ${ticket.serialNumber}`;
-  if (ticket.status) productDesc += `\nStatus: ${ticket.status}`;
-  productDesc += `\nStage: ${stageName}`;
-  
-  const splitDesc = doc.splitTextToSize(productDesc, 220);
-  doc.text(splitDesc, colX[1] + 5, itemsStartY + 12);
-  
-  centerText("1.00", colX[3], 30, itemsStartY + 12);
-  centerText("NOS", colX[4], 30, itemsStartY + 12);
-  centerText("0.00", colX[5], 50, itemsStartY + 12);
-  centerText("0.00", colX[6], 40, itemsStartY + 12);
-  centerText("0.00", colX[7], 65, itemsStartY + 12);
+  fill(lBlue); strk([200, 220, 245], 0.5);
+  fdRound(margin, y, cW, tcH, 6);
 
-  // Draw vertical lines
-  const footerY = boxY + 550; 
-  drawColLines(rowY, footerY);
-  drawLine(startX, footerY, startX + width, footerY);
+  fill(navy); circ(margin + 14, y + 14, 9);
+  font('bold', 11); rgb(navy);
+  doc.text('TERMS & CONDITIONS', margin + 28, y + 18);
 
-  // Footer
-  doc.setFont("helvetica", "bold");
-  doc.text("GSTIN No :    24DUSPP8599C1ZS", startX + 5, footerY + 12);
-  doc.text("Sub Total", colX[6] + 5, footerY + 12);
-  doc.text("0.00", startX + width - 5, footerY + 12, { align: 'right' });
-  drawLine(startX, footerY + 20, startX + width, footerY + 20);
+  const tcDivX = margin + cW * 0.58;
+  const tcLines = [
+    'Goods once sold will not be taken back.',
+    'Interest @18% p.a. will be charged if payment is not made within due date.',
+    'Our risk & responsibility ceases as goods leave our premises.',
+    "Subject to 'Anand' Jurisdiction only. E.&.O.E",
+  ];
+  tcLines.forEach((l, i) => {
+    const lineY = y + 32 + i * 14;
+    fill(blue); circ(margin + 13, lineY - 2, 4);
+    font('bold', 6); rgb(white); doc.text('\u2713', margin + 10, lineY + 1);
+    font('normal', 7.5); rgb(dkText);
+    doc.text(doc.splitTextToSize(l, tcDivX - margin - 28)[0], margin + 21, lineY + 1);
+  });
 
-  // Bank Details & Taxes
-  const bankY = footerY + 20;
-  doc.text("Bank Name", startX + 5, bankY + 12);
-  doc.text(":", startX + 80, bankY + 12);
-  doc.setFont("helvetica", "normal");
-  doc.text("SBI BANK, Bakrol Branch", startX + 90, bankY + 12);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("Bank A/c. No.", startX + 5, bankY + 24);
-  doc.text(":", startX + 80, bankY + 24);
-  doc.setFont("helvetica", "normal");
-  doc.text("44516176686", startX + 90, bankY + 24);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("RTGS/IFSC Code", startX + 5, bankY + 36);
-  doc.text(":", startX + 80, bankY + 36);
-  doc.setFont("helvetica", "normal");
-  doc.text("SBIN0061574", startX + 90, bankY + 36);
+  strk([180, 210, 240], 0.5); ln(tcDivX, y + 8, tcDivX, y + tcH - 8);
 
-  // Tax split lines
-  const taxLineX = startX + 380;
-  drawLine(taxLineX, bankY, taxLineX, bankY + 50);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("Taxable Amount", taxLineX + 5, bankY + 24);
-  doc.text("0.00", taxLineX + 150, bankY + 24, { align: 'right' });
-  
-  doc.setFont("helvetica", "normal");
-  doc.text("Central Tax", taxLineX + 5, bankY + 36);
-  doc.text("0.00", taxLineX + 150, bankY + 36, { align: 'right' });
-  
-  doc.text("State/UT Tax", taxLineX + 5, bankY + 48);
-  doc.text("0.00", taxLineX + 150, bankY + 48, { align: 'right' });
+  const sigW = margin + cW - tcDivX;
+  font('bold', 10); rgb(navy);
+  doc.text('For, AVXPERTS', tcDivX + sigW / 2, y + 20, { align: 'center' });
+  strk(navy, 0.5); ln(tcDivX + 15, y + tcH - 25, margin + cW - 15, y + tcH - 25);
+  font('normal', 8); rgb(mdText);
+  doc.text('(Authorised Signatory)', tcDivX + sigW / 2, y + tcH - 10, { align: 'center' });
+  y += tcH + 14;
 
-  drawLine(startX, bankY + 50, startX + width, bankY + 50);
+  // ═══════════════════════════════════════════════════════════
+  // FOOTER
+  // ═══════════════════════════════════════════════════════════
+  const ftH = 52;
+  fill(navy); fRound(margin, y, cW, ftH, 6);
 
-  // Total GST and Bill Amount
-  const totalY = bankY + 50;
-  doc.setFont("helvetica", "bold");
-  doc.text("Total GST :", startX + 5, totalY + 12);
-  doc.setFont("helvetica", "normal");
-  doc.text("Zero Only", startX + 60, totalY + 12);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("Bill Amount :", startX + 5, totalY + 24);
-  doc.setFont("helvetica", "normal");
-  doc.text("Zero Only", startX + 70, totalY + 24);
+  fill(blue); circ(margin + 26, y + ftH / 2, 17);
+  font('bold', 14); rgb(white); doc.text('\u260E', margin + 18, y + ftH / 2 + 6);
 
-  // Grand Total Box
-  drawLine(taxLineX, bankY + 50, taxLineX, bankY + 80);
-  doc.setFillColor(226, 232, 240);
-  doc.rect(taxLineX, bankY + 50, width - 380, 30, 'F');
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.text("Grand Total", taxLineX + 5, bankY + 68);
-  doc.text("0.00", startX + width - 5, bankY + 68, { align: 'right' });
+  font('bold', 9); rgb(white); doc.text('Need Help?', margin + 50, y + ftH / 2 - 4);
+  font('normal', 7.5); rgb([180, 210, 240]);
+  doc.text("We're here to help you.", margin + 50, y + ftH / 2 + 8);
+  doc.text('Thank you for choosing ', margin + 50, y + ftH / 2 + 19);
+  font('bold', 7.5); rgb(white); doc.text('AVXPERTS.', margin + 131, y + ftH / 2 + 19);
 
-  drawLine(startX, bankY + 80, startX + width, bankY + 80);
+  strk([60, 100, 155], 0.5); ln(pageW / 2 + 20, y + 10, pageW / 2 + 20, y + ftH - 10);
 
-  // T&C and Signature
-  const tcY = bankY + 80;
-  doc.setFontSize(8);
-  doc.text("Terms & Conditions :", startX + 5, tcY + 12);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
-  doc.text("1. Goods once sold will not be taken back.", startX + 5, tcY + 24);
-  doc.text("2. Interest @18% p.a. will be charged if payment is not made within due date.", startX + 5, tcY + 34);
-  doc.text("3. Our risk and responsibility ceases as soon as the goods leave our premises.", startX + 5, tcY + 44);
-  doc.text("4. \"Subject to 'Anand' Jurisdiction only. E.&.O.E\"", startX + 5, tcY + 54);
+  const socX = pageW / 2 + 36;
+  font('bold', 7); rgb([180, 210, 240]); doc.text('FOLLOW US', socX, y + 18);
+  ['f', 'in', 'w'].forEach((s, i) => {
+    const ix = socX + i * 30, iy = y + 36;
+    fill([60, 100, 155]); circ(ix + 10, iy, 10);
+    font('bold', 7.5); rgb(white); doc.text(s, ix + 10, iy + 3, { align: 'center' });
+  });
 
-  // Signature
-  const sigX = startX + 380;
-  drawLine(sigX, tcY, sigX, boxY + 700);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "bold");
-  doc.text("For, AVXPERTS", startX + width - 5, tcY + 12, { align: 'right' });
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.text("(Authorised Signatory)", startX + width - 5, tcY + 62, { align: 'right' });
-
+  // ─── PRINT ──────────────────────────────────────────────────
+  doc.autoPrint();
   window.open(doc.output('bloburl'), '_blank');
-  doc.save(`${ticket.rma}_${stageName.replace(/ /g, '_')}.pdf`);
 };

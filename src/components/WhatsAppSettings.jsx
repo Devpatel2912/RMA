@@ -12,7 +12,7 @@ export default function WhatsAppSettings() {
 
   const checkStatus = async () => {
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
       const response = await axios.get(`${baseUrl}/whatsapp/status`);
       if (response.data.connected) {
         setStatus('connected');
@@ -35,7 +35,7 @@ export default function WhatsAppSettings() {
     if (!window.confirm("Are you sure you want to disconnect WhatsApp?")) return;
     setLoading(true);
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
       await axios.post(`${baseUrl}/whatsapp/logout`);
       setStatus('idle');
       setConnectedNumber('');
@@ -60,7 +60,7 @@ export default function WhatsAppSettings() {
     setPairingCode('');
     
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
       const response = await axios.post(`${baseUrl}/whatsapp/connect`, { phoneNumber });
       
       if (response.data.pairingCode) {

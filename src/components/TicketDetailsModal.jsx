@@ -94,7 +94,7 @@ export default function TicketDetailsModal({
   const handleDeleteService = async (serviceId) => {
     if (!window.confirm("Are you sure you want to delete this service?")) return;
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
       await axios.delete(`${baseUrl}/tickets/${serviceId}`);
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
     } catch (err) {
@@ -109,7 +109,7 @@ export default function TicketDetailsModal({
         alert("Please fill required fields: Product, Category, Vendor");
         return;
       }
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
       await axios.put(`${baseUrl}/tickets/${serviceId}`, {
         product: editData.productName,
         category: editData.category,
@@ -182,7 +182,7 @@ export default function TicketDetailsModal({
         </div>
 
         {/* Customer Details Box */}
-        <div style={{ backgroundColor: '#f8fafc', padding: '16px 20px', borderRadius: '12px', marginBottom: '24px', display: 'flex', gap: '32px', border: '1px solid #e2e8f0' }}>
+        <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', marginBottom: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '20px', border: '1px solid #e2e8f0' }}>
           <div>
             <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Customer Name</div>
             <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: 600 }}>{viewingItem.name}</div>
@@ -195,6 +195,12 @@ export default function TicketDetailsModal({
             <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Email</div>
             <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: 500 }}>{viewingItem.email || 'N/A'}</div>
           </div>
+          {viewingItem.description && (
+            <div style={{ gridColumn: '1 / -1' }}>
+              <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Problem Description</div>
+              <div style={{ fontSize: '14px', color: '#334155', lineHeight: '1.6', backgroundColor: 'white', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>{viewingItem.description}</div>
+            </div>
+          )}
         </div>
 
         {/* Product Details Box */}
@@ -273,19 +279,33 @@ export default function TicketDetailsModal({
                     <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: 500 }}>{service.serialNumber || 'N/A'}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Image</div>
-                    {service.inwardImageURL ? (
-                      <button 
-                        onClick={() => setPreviewImage(service.inwardImageURL)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: 0, fontSize: '14px', fontWeight: 500 }}
-                      >
-                        <Eye size={16} /> View Image
-                      </button>
-                    ) : (
-                      <span style={{ color: '#94a3b8', fontSize: '14px' }}>No Image</span>
-                    )}
+                    <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Date</div>
+                    <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: 500 }}>{service.date || 'N/A'}</div>
                   </div>
                 </div>
+
+                {/* Inward Image — shown prominently */}
+                {service.inwardImageURL && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '10px' }}>
+                      Inward Image
+                    </div>
+                    <div
+                      onClick={() => setPreviewImage(service.inwardImageURL)}
+                      style={{ cursor: 'zoom-in', display: 'inline-block', borderRadius: '10px', overflow: 'hidden', border: '2px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', transition: 'box-shadow 0.2s' }}
+                      onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(59,130,246,0.25)'}
+                      onMouseLeave={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'}
+                      title="Click to view full size"
+                    >
+                      <img
+                        src={service.inwardImageURL}
+                        alt="Inward"
+                        style={{ maxHeight: '220px', maxWidth: '100%', display: 'block', objectFit: 'contain' }}
+                      />
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>Click image to view full size</div>
+                  </div>
+                )}
                 
                 <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

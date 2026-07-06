@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Search, ArrowRightCircle, Share, Eye, Loader2 } from 'lucide-react';
+import { Search, ArrowRightCircle, Share, Eye, Printer } from 'lucide-react';
 import { useTickets } from '../api/hooks';
+import { SkeletonLoader } from './Spinner';
 
 export default function WorkflowTab({
   setAdvancingItem, setAdvanceDate, setNewSerialNumber, setCourierCharge,
@@ -37,11 +38,7 @@ export default function WorkflowTab({
   });
 
   if (isLoading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '40px' }}>
-        <Loader2 className="lucide-spin" size={32} color="#64748b" />
-      </div>
-    );
+    return <SkeletonLoader rows={7} />;
   }
 
   return (
@@ -124,8 +121,20 @@ export default function WorkflowTab({
               const { mainItem, services } = group;
               const hasMultiple = services.length > 1;
               return (
-              <tr className="workflow-tr" key={mainItem.rma}>
-                <td className="workflow-td ticket-id">{mainItem.rma}</td>
+              <tr
+                className="workflow-tr"
+                key={mainItem.rma}
+                style={{ cursor: 'pointer' }}
+                onClick={() => setViewingItem(mainItem)}
+              >
+                <td className="workflow-td ticket-id">
+                  <span
+                    style={{ color: '#3b82f6', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600 }}
+                    onClick={(e) => { e.stopPropagation(); setViewingItem(mainItem); }}
+                  >
+                    {mainItem.rma}
+                  </span>
+                </td>
                 <td className="workflow-td">
                   <span className="table-cell-main">{mainItem.name}</span>
                   <span className="table-cell-sub">{mainItem.contactNumber}</span>
@@ -183,9 +192,9 @@ export default function WorkflowTab({
                             e.stopPropagation();
                             handleGenerateReport(mainItem);
                           }}
-                          title="Generate Final Report & Send to WhatsApp"
+                          title={mainItem.status === 'COMPLETED' ? "Download Final Report" : "Complete Ticket & Send Final Report to WhatsApp"}
                         >
-                          <Share size={20} />
+                          {mainItem.status === 'COMPLETED' ? <Printer size={20} /> : <Share size={20} />}
                         </button>
                       )
                     ) : (
