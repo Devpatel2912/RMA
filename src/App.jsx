@@ -13,7 +13,11 @@ import {
   Printer,
   Eye,
   EyeOff,
-  Smartphone
+  Smartphone,
+  Truck,
+  Moon,
+  Sun,
+  X
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTickets, useVendors } from './api/hooks';
@@ -37,6 +41,7 @@ import AdvanceWorkflowModal from './components/AdvanceWorkflowModal';
 import TicketDetailsModal from './components/TicketDetailsModal';
 import PrintReportsTab from './components/PrintReportsTab';
 import WhatsAppSettings from './components/WhatsAppSettings';
+import CourierChargesTab from './components/CourierChargesTab';
 
 // Initialize Axios default token if available in localStorage
 const initialToken = localStorage.getItem('token');
@@ -65,6 +70,24 @@ function App() {
   const [courierCharge, setCourierCharge] = useState('');
   const [customMessage, setCustomMessage] = useState('');
   const [generatingReportId, setGeneratingReportId] = useState(null);
+  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-US', { hour12: false }));
+  
+  // Theme state — persisted in localStorage
+  const [theme, setTheme] = useState(() => localStorage.getItem('rma-theme') || 'light');
+
+  // Apply theme to document
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('rma-theme', theme);
+  }, [theme]);
+
+  // Live clock
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString('en-US', { hour12: false }));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const getTodayDate = () => new Date().toISOString().split('T')[0];
 
@@ -320,16 +343,8 @@ function App() {
     if (advancingItem.status === 'CUSTOMER INWARD') {
       const itemToSend = updatedItem || advancingItem;
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
-      
-      // 1. Send PDF to Customer
-      axios.post(`${baseUrl}/whatsapp/send-pdf`, { ticketData: itemToSend, message: customMessage })
-        .then(res => console.log("WhatsApp PDF Sent to Customer:", res.data))
-        .catch(err => {
-          console.error("Failed to send WhatsApp PDF to Customer:", err);
-          alert("Customer WhatsApp failed: " + (err.response?.data?.error || err.message));
-        });
 
-      // 2. Send PDF to Vendor
+      // 1. Send PDF to Vendor Only
       const vendorObj = vendors.find(v => v.companyName === advancingItem.serviceVendor);
       if (vendorObj && vendorObj.phoneNumber) {
         axios.post(`${baseUrl}/whatsapp/send-pdf`, { ticketData: itemToSend, message: customMessage, targetPhone: vendorObj.phoneNumber })
@@ -345,20 +360,17 @@ function App() {
       // The WhatsApp PDF is generated and sent by the backend.
       // We no longer auto-download the PDF on the frontend here.
     } else if (advancingItem.status === 'VENDOR INWARD') {
-      // Send text message to the vendor
-      const vendorObj = vendors.find(v => v.companyName === advancingItem.serviceVendor);
-      if (vendorObj && vendorObj.phoneNumber) {
-        const vendorText = `*RMA Ticket Update*\nProduct: ${advancingItem.product}\nCustomer: ${advancingItem.name}\nCategory: ${advancingItem.category}\nOld Serial Number: ${advancingItem.serialNumber || 'N/A'}\nNew Serial Number: ${newSerialNumber || 'N/A'}\nCourier Charge: ${courierCharge || 'N/A'}\nTransition Date: ${formattedDate}`;
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
-        axios.post(`${baseUrl}/whatsapp/send-text`, { vendorPhone: vendorObj.phoneNumber, text: vendorText })
-          .then(res => console.log("Vendor WhatsApp Text Sent:", res.data))
-          .catch(err => {
-            console.error("Failed to send Vendor WhatsApp text:", err);
-            alert("Vendor WhatsApp text failed: " + (err.response?.data?.error || err.message));
-          });
-      } else {
-        console.warn("Vendor phone number not found for:", advancingItem.serviceVendor);
-      }
+      // Transitioning to CUSTOMER OUTWARD -> Send PDF to Customer Only
+      const itemToSend = updatedItem || advancingItem;
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+
+      // Send PDF to Customer
+      axios.post(`${baseUrl}/whatsapp/send-pdf`, { ticketData: itemToSend, message: customMessage })
+        .then(res => console.log("WhatsApp PDF Sent to Customer:", res.data))
+        .catch(err => {
+          console.error("Failed to send WhatsApp PDF to Customer:", err);
+          alert("Customer WhatsApp failed: " + (err.response?.data?.error || err.message));
+        });
     }
 
     setAdvancingItem(null);
@@ -473,6 +485,7 @@ function App() {
     }
   };
 
+  // ── Login Page ─────────────────────────────────────────
   if (!isLoggedIn) {
     return (
       <div className="login-container">
@@ -488,13 +501,13 @@ function App() {
 
           <form className="login-form" onSubmit={handleLogin}>
             {loginError && (
-              <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '10px 14px', borderRadius: '6px', fontSize: '13px', marginBottom: '16px', border: '1px solid #f87171' }}>
+              <div className="login-error">
                 {loginError}
               </div>
             )}
             <div className="login-input-group">
               <label>Email Address</label>
-              <input type="email" name="email" className="login-input" placeholder="Enter your email" required />
+              <input type="email" name="email" className="login-input" placeholder="admin@example.com" required />
             </div>
 
             <div className="login-input-group">
@@ -506,14 +519,14 @@ function App() {
                   className="login-input" 
                   placeholder="••••••••" 
                   required 
-                  style={{ paddingRight: '40px' }}
+                  style={{ paddingRight: '44px' }}
                 />
                 <button 
                   type="button" 
                   onClick={() => setShowPassword(!showPassword)}
-                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
               </div>
             </div>
@@ -522,22 +535,38 @@ function App() {
               {isLoggingIn ? <Spinner size="sm" variant="white" /> : 'Sign In'}
             </button>
           </form>
+
+          {/* Footer note */}
+          <p style={{ textAlign: 'center', fontSize: '12px', color: '#334155', marginTop: '-8px' }}>
+            RMA Flow · Powered by Avxperts
+          </p>
         </div>
       </div>
     );
   }
+
+  // ── Main Layout ────────────────────────────────────────
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'workflow', label: 'Workflow', icon: Workflow },
+    { id: 'categories', label: 'Categories', icon: Package },
+    { id: 'vendors', label: 'Vendors', icon: Building2 },
+    { id: 'print', label: 'Reports', icon: Printer },
+    ...(userRole === 'ADMIN' ? [{ id: 'whatsapp', label: 'WhatsApp Setup', icon: Smartphone }] : []),
+    { id: 'courier-charges', label: 'Courier Charges', icon: Truck },
+  ];
 
   return (
     <div className="layout">
 
       {/* Mobile Header */}
       <div className="mobile-header">
-        <div className="brand">
+        <div className="brand" style={{ margin: 0 }}>
           <div className="brand-logo">R</div>
           <span className="brand-title">RMA Flow</span>
         </div>
         <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(true)}>
-          <Menu size={24} color="white" />
+          <Menu size={20} color="white" />
         </button>
       </div>
 
@@ -550,55 +579,23 @@ function App() {
       <div className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
         <div className="brand">
           <div className="brand-logo">R</div>
-          <span className="brand-title">RMA Flow</span>
+          <div>
+            <div className="brand-title">RMA Flow</div>
+            <div className="brand-subtitle">Service Management</div>
+          </div>
         </div>
 
         <div className="nav-menu">
-          <div
-            className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => handleTabChange('dashboard')}
-          >
-            <LayoutDashboard size={20} />
-            <span>Dashboard</span>
-          </div>
-          <div
-            className={`nav-item ${activeTab === 'workflow' ? 'active' : ''}`}
-            onClick={() => handleTabChange('workflow')}
-          >
-            <Workflow size={20} />
-            <span>Workflow</span>
-          </div>
-
-          <div
-            className={`nav-item ${activeTab === 'categories' ? 'active' : ''}`}
-            onClick={() => handleTabChange('categories')}
-          >
-            <Package size={20} />
-            <span>Categories</span>
-          </div>
-          <div
-            className={`nav-item ${activeTab === 'vendors' ? 'active' : ''}`}
-            onClick={() => handleTabChange('vendors')}
-          >
-            <Building2 size={20} />
-            <span>Vendors</span>
-          </div>
-          <div
-            className={`nav-item ${activeTab === 'print' ? 'active' : ''}`}
-            onClick={() => handleTabChange('print')}
-          >
-            <Printer size={20} />
-            <span>Reports</span>
-          </div>
-          {userRole === 'ADMIN' && (
+          {navItems.map(({ id, label, icon: Icon }) => (
             <div
-              className={`nav-item ${activeTab === 'whatsapp' ? 'active' : ''}`}
-              onClick={() => handleTabChange('whatsapp')}
+              key={id}
+              className={`nav-item ${activeTab === id ? 'active' : ''}`}
+              onClick={() => handleTabChange(id)}
             >
-              <Smartphone size={20} />
-              <span>WhatsApp Setup</span>
+              <Icon size={18} />
+              <span>{label}</span>
             </div>
-          )}
+          ))}
         </div>
 
         <button className="new-inward-btn" onClick={() => { 
@@ -618,18 +615,21 @@ function App() {
           setIsModalOpen(true); 
           setIsMobileMenuOpen(false); 
         }}>
-          <Plus size={20} />
+          <Plus size={18} />
           <span>New Inward</span>
         </button>
 
         <div className="logout-btn-container">
+
+
+          {/* Logout */}
           <button className="logout-btn" onClick={() => {
             localStorage.removeItem('token');
             localStorage.removeItem('userRole');
             delete axios.defaults.headers.common['Authorization'];
             setIsLoggedIn(false);
           }}>
-            <LogOut size={20} />
+            <LogOut size={17} />
             <span>Sign Out</span>
           </button>
         </div>
@@ -676,6 +676,10 @@ function App() {
           {activeTab === 'whatsapp' && (
             <WhatsAppSettings />
           )}
+
+          {activeTab === 'courier-charges' && (
+            <CourierChargesTab recentActivities={recentActivities} />
+          )}
         </div>
 
         {/* Footer Status Bar */}
@@ -686,15 +690,15 @@ function App() {
               <span>System Ready</span>
             </div>
             <div className="status-divider"></div>
-            <span>Total Records: {recentActivities.length}</span>
+            <span>Total Records: <strong>{recentActivities.length}</strong></span>
           </div>
 
           <div className="status-right">
-            <span>Pending VO: {recentActivities.filter(a => a.status === 'VENDOR OUTWARD').length}</span>
-            <span>Pending VI: {recentActivities.filter(a => a.status === 'VENDOR INWARD').length}</span>
-            <span>Pending CO: {recentActivities.filter(a => a.status === 'CUSTOMER OUTWARD').length}</span>
+            <span>VO: <strong>{recentActivities.filter(a => a.status === 'VENDOR OUTWARD').length}</strong></span>
+            <span>VI: <strong>{recentActivities.filter(a => a.status === 'VENDOR INWARD').length}</strong></span>
+            <span>CO: <strong>{recentActivities.filter(a => a.status === 'CUSTOMER OUTWARD').length}</strong></span>
             <div className="status-divider"></div>
-            <span>Time: {new Date().toLocaleTimeString('en-US', { hour12: false })}</span>
+            <span>{currentTime}</span>
           </div>
         </div>
       </div>

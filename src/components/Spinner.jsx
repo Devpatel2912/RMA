@@ -16,7 +16,7 @@ export default function Spinner({ size = 'md', variant = 'primary', label = '', 
 
   const colors = {
     primary: { track: '#e0e7ff', spin: '#4f46e5' },
-    blue:    { track: '#dbeafe', spin: '#3b82f6' },
+    blue:    { track: '#dbeafe', spin: '#10b981' },
     white:   { track: 'rgba(255,255,255,0.25)', spin: '#ffffff' },
     muted:   { track: '#e2e8f0', spin: '#94a3b8' },
   };

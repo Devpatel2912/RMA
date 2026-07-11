@@ -1,40 +1,64 @@
-/* Responsive Mobile Styles */
+/* ═══════════════════════════════════════════════════════
+   RESPONSIVE / MOBILE STYLES
+   ═══════════════════════════════════════════════════════ */
+
+@media (max-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 
 @media (max-width: 768px) {
+
+  /* ── Layout ── */
   .layout {
     flex-direction: column;
   }
-  
+
+  /* ── Mobile Header ── */
   .mobile-header {
     display: flex;
-    background-color: var(--bg-sidebar);
-    padding: 16px 20px;
+    background-color: var(--sidebar-bg, #0F172A);
+    padding: 0 20px;
+    height: 56px;
     align-items: center;
     justify-content: space-between;
     width: 100%;
     z-index: 40;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
   }
 
   .mobile-menu-btn {
-    background: transparent;
-    border: none;
+    width: 36px;
+    height: 36px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 4px;
+    padding: 0;
+    transition: background 0.18s;
   }
 
+  .mobile-menu-btn:hover {
+    background: rgba(255,255,255,0.1);
+  }
+
+  /* ── Overlay ── */
   .mobile-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100dvh;
-    background-color: rgba(0, 0, 0, 0.5);
+    inset: 0;
+    background-color: rgba(0,0,0,0.6);
+    backdrop-filter: blur(2px);
     z-index: 45;
+    display: block;
+    animation: fade-in 0.2s ease;
   }
 
+  /* ── Sidebar Drawer ── */
   .sidebar {
     position: fixed;
     top: 0;
@@ -42,167 +66,182 @@
     height: 100dvh;
     width: 280px;
     flex-direction: column;
-    padding: 24px 20px;
+    padding: 20px 16px;
     align-items: stretch;
     justify-content: flex-start;
     z-index: 50;
     transform: translateX(-100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.3s cubic-bezier(.4, 0, .2, 1);
+    box-shadow: none;
   }
 
   .sidebar.mobile-open {
     transform: translateX(0);
+    box-shadow: none;
   }
-  
+
+  /* ── Brand ── */
   .brand {
-    margin-bottom: 32px;
-    margin-right: 0;
+    margin-bottom: 24px;
   }
-  
-  .brand-text {
-    display: flex;
-  }
-  
+
+  /* ── Nav ── */
   .nav-menu {
     flex-direction: column;
-    gap: 8px;
+    gap: 2px;
     flex: 1;
   }
-  
-  .nav-item span {
-    display: inline;
-  }
-  
+
   .nav-item {
-    padding: 12px 16px;
+    padding: 12px 14px;
     width: 100%;
     justify-content: flex-start;
   }
-  
+
+  .nav-item span { display: inline; }
+
+  /* ── Buttons ── */
   .new-inward-btn {
     width: 100%;
-    padding: 14px;
+    padding: 13px 16px;
     margin-left: 0;
     margin-right: 0;
     justify-content: center;
   }
-  
-  .new-inward-btn span {
-    display: inline;
-  }
-  
-  .logout-btn-container {
-    margin-top: auto;
-    padding-top: 24px;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-  }
-  
-  .logout-btn {
-    padding: 12px 16px;
-    width: 100%;
-    justify-content: flex-start;
-  }
-  
-  .logout-btn span {
-    display: inline;
-  }
-  
+
+  .new-inward-btn span { display: inline; }
+
+  .logout-btn { width: 100%; justify-content: flex-start; }
+  .logout-btn span { display: inline; }
+  .theme-toggle-btn { width: 100%; justify-content: flex-start; }
+  .theme-toggle-btn span { display: inline; }
+
+  /* ── Main Content ── */
   .main-content {
     padding: 20px 16px;
+    gap: 20px;
   }
-  
+
+  /* ── Stats Grid ── */
   .stats-grid {
     grid-template-columns: 1fr 1fr;
   }
-  
+
+  /* ── Header ── */
   .header {
     flex-direction: column;
     align-items: stretch;
-    gap: 16px;
+    gap: 12px;
   }
-  
+
   .export-btn {
     justify-content: center;
+    width: 100%;
   }
-  
+
+  /* ── Status Bar ── */
   .status-bar {
     flex-direction: column;
     height: auto;
-    padding: 12px 16px;
-    gap: 12px;
+    padding: 10px 16px;
+    gap: 6px;
+    font-size: 11px;
   }
-  
+
   .status-left, .status-right {
     width: 100%;
     justify-content: space-between;
     gap: 8px;
+    flex-wrap: wrap;
   }
-  
-  .status-divider {
-    display: none;
-  }
-  
+
+  .status-divider { display: none; }
+
+  /* ── Ledgers ── */
   .ledgers-grid {
     grid-template-columns: 1fr;
   }
-  
+
+  /* ── Workflow ── */
   .workflow-header {
     flex-direction: column;
+    align-items: stretch;
+    margin-bottom: 16px;
   }
-  
+
   .workflow-controls {
     flex-direction: column;
     width: 100%;
-  }
-  
-  .search-box {
-    width: 100%;
-  }
-  
-  .filter-dropdown {
-    width: 100%;
-  }
-  
-  .workflow-table-container {
-    overflow-x: auto;
-  }
-  
-  .form-row {
-    flex-direction: column;
-    gap: 20px;
+    gap: 8px;
   }
 
+  .search-box { width: 100%; }
+  .filter-dropdown { width: 100%; }
+
+  .workflow-table-container { overflow-x: auto; }
+
+  .pagination-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  /* ── Forms ── */
+  .form-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    padding: 16px !important;
+    align-items: flex-end;
+  }
+
+  .modal-content {
+    max-height: 92dvh;
+    border-radius: 20px 20px 16px 16px;
+  }
+
+  /* ── Cards ── */
+  .card-header-row {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  /* ── Activity ── */
   .activity-item {
     flex-wrap: wrap;
     align-items: flex-start;
-    gap: 12px;
+    gap: 10px;
   }
 
   .activity-meta {
-    width: calc(100% - 56px);
-    margin-left: 56px; /* align with text */
+    width: calc(100% - 54px);
+    margin-left: 54px;
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
-    gap: 12px;
-  }
-
-  .modal-overlay {
-    padding: 20px !important;
-  }
-
-  .card-header-row {
-    flex-direction: column;
-    gap: 12px;
+    gap: 10px;
   }
 }
 
+/* ── Small Mobile ── */
 @media (max-width: 480px) {
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .status-right {
     flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding-left: 18px;
+    padding-right: 18px;
   }
 }

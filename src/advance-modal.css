@@ -1,75 +1,171 @@
-/* Adding to the end of modal.css for advance workflow modal */
+/* ═══════════════════════════════════════════════════════
+   ADVANCE WORKFLOW MODAL
+   ═══════════════════════════════════════════════════════ */
 
 .advance-modal {
-  max-width: 400px;
+  max-width: 500px;
 }
 
+/* ── Modal Header ── */
 .advance-modal-header {
-  padding: 24px;
+  padding: 24px 28px 20px;
 }
 
+/* ── Modal Body ── */
 .advance-modal-body {
-  padding: 0 24px 24px 24px;
-}
-
-.current-state-box {
-  background-color: #f8fafc;
-  border-radius: 8px;
-  padding: 16px;
+  padding: 0 28px 24px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 16px;
+}
+
+/* ── Current State Box ── */
+.current-state-box {
+  background: linear-gradient(135deg, var(--primary-light, #ecfdf5) 0%, rgba(6,182,212,0.06) 100%);
+  border: 1.5px solid rgba(4,120,87,0.15);
+  border-radius: var(--radius-sm, 8px);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .current-state-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--primary, #047857);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
 }
 
 .current-state-value {
-  font-size: 14px;
-  font-weight: 600;
-  color: #0f172a;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary, #0F172A);
+  letter-spacing: 0.2px;
 }
 
+/* ── Footer ── */
 .advance-modal-footer {
-  padding: 16px 24px;
+  padding: 16px 28px 24px;
   display: flex;
   justify-content: flex-end;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
+  border-top: 1px solid var(--border, #E2E8F0);
+  background: var(--surface-hover, #F8FAFC);
+  border-radius: 0 0 var(--radius-xl, 20px) var(--radius-xl, 20px);
 }
 
+/* ── Text Cancel Button ── */
 .btn-text-cancel {
   background: none;
   border: none;
-  color: #475569;
-  font-size: 13px;
-  font-weight: 500;
+  color: var(--text-secondary, #475569);
+  font-size: 13.5px;
+  font-weight: 600;
   cursor: pointer;
-  padding: 8px;
-  transition: color 0.2s;
+  padding: 9px 14px;
+  border-radius: var(--radius-sm, 8px);
+  transition: all 0.18s;
+  font-family: 'Inter', sans-serif;
 }
 
 .btn-text-cancel:hover {
-  color: #0f172a;
+  background-color: var(--surface-hover, #F1F5F9);
+  color: var(--text-primary, #0F172A);
 }
 
+/* ── Confirm Button ── */
 .btn-confirm {
-  background-color: var(--primary-blue);
+  background: linear-gradient(135deg, var(--primary, #047857) 0%, #065f46 100%);
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 13px;
-  font-weight: 600;
+  border-radius: var(--radius-sm, 8px);
+  padding: 11px 22px;
+  font-size: 13.5px;
+  font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.18s;
+  box-shadow: none;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.1px;
 }
 
 .btn-confirm:hover {
-  background-color: var(--primary-blue-hover);
+  background: linear-gradient(135deg, var(--primary-hover, #065f46) 0%, #064e3b 100%);
+  box-shadow: none;
+  transform: translateY(-1px);
+}
+
+.btn-confirm:active {
+  transform: translateY(0);
+}
+
+/* ── Detail item labels/values (inline styles in component) ── */
+.detail-label {
+  font-size: 11px;
+  color: var(--text-secondary, #64748B);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.detail-value {
+  font-size: 14px;
+  color: var(--text-primary, #0F172A);
+  font-weight: 500;
+}
+
+/* ── Upload Buttons ── */
+.upload-btn {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border, #E2E8F0);
+  border-radius: var(--radius-sm, 8px);
+  text-align: center;
+  cursor: pointer;
+  background-color: var(--surface-hover, #F8FAFC);
+  font-size: 13px;
+  color: var(--text-secondary, #334155);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-weight: 500;
+  transition: all 0.18s;
+  font-family: 'Inter', sans-serif;
+}
+
+.upload-btn:hover {
+  border-color: var(--primary, #047857);
+  background-color: var(--primary-light, #ecfdf5);
+  color: var(--primary, #047857);
+}
+
+/* ── Print Ticket Button ── */
+.print-ticket-btn {
+  width: 100%;
+  padding: 11px;
+  border-radius: var(--radius-sm, 8px);
+  border: 1.5px solid var(--border, #E2E8F0);
+  background-color: var(--surface, #FFFFFF);
+  color: var(--text-primary, #0F172A);
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: all 0.18s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'Inter', sans-serif;
+}
+
+.print-ticket-btn:hover {
+  border-color: var(--primary, #047857);
+  background-color: var(--primary-light, #ecfdf5);
+  color: var(--primary, #047857);
 }

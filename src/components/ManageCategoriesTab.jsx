@@ -6,14 +6,14 @@ import { useCategories } from '../api/hooks';
 import Spinner, { SkeletonLoader } from './Spinner';
 
 const CATEGORY_COLORS = [
-  { bg: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8', dot: '#3b82f6' },
-  { bg: '#f0fdf4', border: '#bbf7d0', text: '#15803d', dot: '#22c55e' },
-  { bg: '#fdf4ff', border: '#e9d5ff', text: '#7e22ce', dot: '#a855f7' },
-  { bg: '#fff7ed', border: '#fed7aa', text: '#c2410c', dot: '#f97316' },
-  { bg: '#fdf2f8', border: '#fbcfe8', text: '#9d174d', dot: '#ec4899' },
-  { bg: '#f0f9ff', border: '#bae6fd', text: '#0369a1', dot: '#0ea5e9' },
-  { bg: '#fefce8', border: '#fde68a', text: '#a16207', dot: '#eab308' },
-  { bg: '#fff1f2', border: '#fecdd3', text: '#be123c', dot: '#f43f5e' },
+  { bg: 'rgba(4,120,87,0.08)',   dot: '#10b981' },
+  { bg: 'rgba(34,197,94,0.08)',   dot: '#22C55E' },
+  { bg: 'rgba(139,92,246,0.08)', dot: '#8B5CF6' },
+  { bg: 'rgba(245,158,11,0.08)', dot: '#F59E0B' },
+  { bg: 'rgba(236,72,153,0.08)', dot: '#EC4899' },
+  { bg: 'rgba(6,182,212,0.08)',  dot: '#06B6D4' },
+  { bg: 'rgba(239,68,68,0.08)',  dot: '#EF4444' },
+  { bg: 'rgba(16,185,129,0.08)', dot: '#10B981' },
 ];
 
 export default function ManageCategoriesTab({ userRole }) {
@@ -72,59 +72,67 @@ export default function ManageCategoriesTab({ userRole }) {
   };
 
   return (
-    <div style={{ maxWidth: '860px', margin: '0 auto', padding: '0 4px' }}>
+    <div style={{ maxWidth: 860, margin: '0 auto' }}>
 
       {/* ── Page Header ── */}
-      <div style={{ marginBottom: '28px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(135deg,#3b82f6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}>
+      <div className="header" style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12,
+            background: 'linear-gradient(135deg, var(--primary), #059669)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: 'none',
+          }}>
             <Tag size={20} color="#fff" />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 700, color: '#0f172a' }}>Manage Categories</h1>
-            <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Organise product types for your RMA workflow.</p>
+            <h1 className="page-title" style={{ fontSize: 22 }}>Manage Categories</h1>
+            <p className="page-subtitle">Organise product types for your RMA workflow</p>
           </div>
         </div>
       </div>
 
-      {/* ── Add Category Card ── */}
+      {/* ── Add Category ── */}
       {userRole === 'ADMIN' && (
-        <div style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #eef2ff 100%)', border: '1px solid #c7d2fe', borderRadius: '16px', padding: '20px 24px', marginBottom: '24px' }}>
-          <p style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 600, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            + New Category
+        <div style={{
+          background: 'var(--surface)',
+          border: '1.5px solid var(--border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '20px 24px',
+          marginBottom: 20,
+          boxShadow: 'none',
+        }}>
+          <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Add New Category
           </p>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: 10 }}>
             <div style={{ position: 'relative', flex: 1 }}>
-              <Tag size={15} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+              <Tag size={14} color="var(--text-muted)" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
               <input
                 type="text"
                 placeholder="e.g. Motherboard, GPU, RAM..."
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-                style={{
-                  width: '100%', padding: '11px 14px 11px 36px', fontSize: '14px',
-                  border: '1.5px solid #c7d2fe', borderRadius: '10px', outline: 'none',
-                  backgroundColor: 'white', color: '#0f172a', boxSizing: 'border-box',
-                  transition: 'border-color 0.2s',
-                }}
-                onFocus={e => e.target.style.borderColor = '#6366f1'}
-                onBlur={e => e.target.style.borderColor = '#c7d2fe'}
+                className="form-input"
+                style={{ paddingLeft: 36 }}
               />
             </div>
             <button
               onClick={handleAdd}
               disabled={isAdding || !newCategoryName.trim()}
               style={{
-                display: 'flex', alignItems: 'center', gap: '7px',
-                padding: '11px 22px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 7,
+                padding: '10px 22px', borderRadius: 'var(--radius-sm)',
+                border: 'none', cursor: isAdding || !newCategoryName.trim() ? 'not-allowed' : 'pointer',
                 background: isAdding || !newCategoryName.trim()
-                  ? '#e2e8f0'
-                  : 'linear-gradient(135deg,#4f46e5,#6366f1)',
-                color: isAdding || !newCategoryName.trim() ? '#94a3b8' : 'white',
-                fontWeight: 600, fontSize: '14px',
-                boxShadow: isAdding || !newCategoryName.trim() ? 'none' : '0 4px 12px rgba(99,102,241,0.35)',
+                  ? 'var(--border)'
+                  : 'linear-gradient(135deg, var(--primary), #059669)',
+                color: isAdding || !newCategoryName.trim() ? 'var(--text-muted)' : 'white',
+                fontWeight: 700, fontSize: 13.5,
+                boxShadow: isAdding || !newCategoryName.trim() ? 'none' : '0 4px 12px rgba(4,120,87,0.35)',
                 transition: 'all 0.2s', whiteSpace: 'nowrap',
+                fontFamily: 'Inter, sans-serif',
               }}
             >
               {isAdding ? <Spinner size="xs" variant="white" /> : <Plus size={16} />}
@@ -135,29 +143,46 @@ export default function ManageCategoriesTab({ userRole }) {
       )}
 
       {/* ── Categories Card ── */}
-      <div style={{ background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}>
+      <div style={{
+        background: 'var(--surface)',
+        borderRadius: 'var(--radius-lg)',
+        border: '1px solid var(--border)',
+        overflow: 'hidden',
+        boxShadow: 'none',
+      }}>
 
         {/* Search + count bar */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', background: '#fafbfc' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FolderOpen size={16} color="#6366f1" />
-            <span style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>
+        <div style={{
+          padding: '14px 20px',
+          borderBottom: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 12, background: 'var(--surface-hover)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <FolderOpen size={16} color="var(--primary)" />
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
               All Categories
             </span>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#6366f1', background: '#eef2ff', padding: '2px 9px', borderRadius: '20px' }}>
+            <span style={{
+              fontSize: 11, fontWeight: 700, color: 'var(--primary)',
+              background: 'var(--primary-light)', padding: '2px 10px', borderRadius: 99,
+            }}>
               {fullCategories.length}
             </span>
           </div>
           <div style={{ position: 'relative' }}>
-            <Search size={14} color="#94a3b8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+            <Search size={13} color="var(--text-muted)" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
             <input
               type="text"
               placeholder="Search..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               style={{
-                padding: '7px 12px 7px 30px', fontSize: '13px', border: '1px solid #e2e8f0',
-                borderRadius: '8px', outline: 'none', backgroundColor: 'white', width: '180px',
+                padding: '7px 12px 7px 30px', fontSize: 13,
+                border: '1.5px solid var(--border)', borderRadius: 8,
+                outline: 'none', background: 'var(--surface)',
+                color: 'var(--text-primary)', width: 180,
+                fontFamily: 'Inter, sans-serif',
               }}
             />
           </div>
@@ -167,14 +192,14 @@ export default function ManageCategoriesTab({ userRole }) {
         {isLoading ? (
           <SkeletonLoader rows={6} />
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 24px', color: '#94a3b8' }}>
-            <Tag size={36} color="#e2e8f0" style={{ marginBottom: '12px' }} />
-            <p style={{ margin: 0, fontSize: '14px' }}>
+          <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
+            <Tag size={32} color="var(--border)" style={{ marginBottom: 12, display: 'block', margin: '0 auto 12px' }} />
+            <p style={{ margin: 0, fontSize: 14 }}>
               {searchTerm ? 'No categories match your search.' : 'No categories yet. Add one above!'}
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', padding: '12px' }}>
+          <div>
             {filtered.map((cat, idx) => {
               const color = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
               const isEditing = editingId === cat.id;
@@ -187,42 +212,54 @@ export default function ManageCategoriesTab({ userRole }) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '16px 20px',
-                    borderBottom: '1px solid #f1f5f9',
-                    background: isEditing ? '#eef2ff' : 'transparent',
-                    transition: 'background-color 0.2s',
+                    padding: '14px 20px',
+                    borderBottom: '1px solid var(--border)',
+                    background: isEditing ? 'var(--primary-light)' : 'transparent',
+                    transition: 'background-color 0.15s',
                     position: 'relative',
                   }}
-                  onMouseEnter={e => { if (!isEditing) e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+                  onMouseEnter={e => { if (!isEditing) e.currentTarget.style.backgroundColor = 'var(--surface-hover)'; }}
                   onMouseLeave={e => { if (!isEditing) e.currentTarget.style.backgroundColor = 'transparent'; }}
                 >
-                  {/* Subtle color dot on the left */}
-                  <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '4px', height: '60%', background: color.dot, borderRadius: '0 4px 4px 0', opacity: isEditing ? 1 : 0.6 }} />
+                  {/* Left color accent */}
+                  <div style={{
+                    position: 'absolute', left: 0, top: '20%', bottom: '20%',
+                    width: 3, background: color.dot, borderRadius: '0 2px 2px 0',
+                  }} />
 
                   {isEditing ? (
-                    <div style={{ display: 'flex', flex: 1, gap: '16px', alignItems: 'center', marginLeft: '12px' }}>
+                    <div style={{ display: 'flex', flex: 1, gap: 12, alignItems: 'center', marginLeft: 14 }}>
                       <input
                         autoFocus
                         type="text"
                         value={editName}
                         onChange={e => setEditName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleUpdate(cat.id)}
-                        style={{
-                          flex: 1, maxWidth: '400px', padding: '8px 12px', fontSize: '14px', fontWeight: 500,
-                          border: '1.5px solid #6366f1', borderRadius: '8px', outline: 'none',
-                          backgroundColor: 'white', color: '#0f172a',
-                        }}
+                        className="form-input"
+                        style={{ flex: 1, maxWidth: 400 }}
                       />
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: 8 }}>
                         <button
                           onClick={() => handleUpdate(cat.id)}
-                          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 16px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.2s' }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '8px 16px', background: 'var(--primary)',
+                            color: 'white', border: 'none', borderRadius: 8,
+                            fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                            fontFamily: 'Inter, sans-serif',
+                          }}
                         >
                           <Check size={14} /> Save
                         </button>
                         <button
                           onClick={() => setEditingId(null)}
-                          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 16px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '8px 16px', background: 'var(--surface-hover)',
+                            color: 'var(--text-secondary)', border: '1px solid var(--border)',
+                            borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                            fontFamily: 'Inter, sans-serif',
+                          }}
                         >
                           <X size={14} /> Cancel
                         </button>
@@ -230,36 +267,66 @@ export default function ManageCategoriesTab({ userRole }) {
                     </div>
                   ) : (
                     <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginLeft: '12px' }}>
-                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: color.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginLeft: 14 }}>
+                        <div style={{
+                          width: 36, height: 36, borderRadius: 10,
+                          background: color.bg, display: 'flex',
+                          alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                        }}>
                           <Tag size={16} color={color.dot} />
                         </div>
                         <div>
-                          <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#0f172a' }}>{cat.name}</p>
-                          <p style={{ margin: 0, fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Product Category</p>
+                          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{cat.name}</p>
+                          <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>Product Category</p>
                         </div>
                       </div>
 
                       {userRole === 'ADMIN' && (
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: 8 }}>
                           <button
                             onClick={() => { setEditingId(cat.id); setEditName(cat.name); }}
                             title="Edit"
-                            style={{ width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'white', border: `1px solid #e2e8f0`, borderRadius: '8px', cursor: 'pointer', color: '#64748b', transition: 'all 0.15s' }}
-                            onMouseEnter={e => { e.currentTarget.style.color = '#3b82f6'; e.currentTarget.style.borderColor = '#bfdbfe'; e.currentTarget.style.background = '#eff6ff'; }}
-                            onMouseLeave={e => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = 'white'; }}
+                            style={{
+                              width: 34, height: 34, display: 'flex', alignItems: 'center',
+                              justifyContent: 'center', background: 'var(--surface)',
+                              border: '1px solid var(--border)', borderRadius: 8,
+                              cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s',
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.color = 'var(--primary)';
+                              e.currentTarget.style.borderColor = 'var(--primary)';
+                              e.currentTarget.style.background = 'var(--primary-light)';
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.color = 'var(--text-muted)';
+                              e.currentTarget.style.borderColor = 'var(--border)';
+                              e.currentTarget.style.background = 'var(--surface)';
+                            }}
                           >
-                            <Pencil size={15} />
+                            <Pencil size={14} />
                           </button>
                           <button
                             onClick={() => handleDelete(cat.id)}
                             disabled={isDeleting}
                             title="Delete"
-                            style={{ width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', color: '#64748b', transition: 'all 0.15s' }}
-                            onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = '#fecaca'; e.currentTarget.style.background = '#fef2f2'; }}
-                            onMouseLeave={e => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = 'white'; }}
+                            style={{
+                              width: 34, height: 34, display: 'flex', alignItems: 'center',
+                              justifyContent: 'center', background: 'var(--surface)',
+                              border: '1px solid var(--border)', borderRadius: 8,
+                              cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s',
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.color = 'var(--error)';
+                              e.currentTarget.style.borderColor = 'var(--error-border)';
+                              e.currentTarget.style.background = 'var(--error-light)';
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.color = 'var(--text-muted)';
+                              e.currentTarget.style.borderColor = 'var(--border)';
+                              e.currentTarget.style.background = 'var(--surface)';
+                            }}
                           >
-                            {isDeleting ? <Spinner size="xs" variant="muted" /> : <Trash2 size={15} />}
+                            {isDeleting ? <Spinner size="xs" variant="muted" /> : <Trash2 size={14} />}
                           </button>
                         </div>
                       )}

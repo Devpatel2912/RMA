@@ -34,7 +34,7 @@ const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
       </div>
       
       {isOpen && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', zIndex: 50, maxHeight: '250px', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', boxShadow: 'none', zIndex: 50, maxHeight: '250px', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', backgroundColor: '#f8fafc', borderRadius: '6px 6px 0 0' }}>
             <Search size={14} color="#94a3b8" style={{ marginRight: '8px' }} />
             <input 
@@ -293,8 +293,8 @@ export default function TicketDetailsModal({
                     </div>
                     <div
                       onClick={() => setPreviewImage(service.inwardImageURL)}
-                      style={{ cursor: 'zoom-in', display: 'inline-block', borderRadius: '10px', overflow: 'hidden', border: '2px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', transition: 'box-shadow 0.2s' }}
-                      onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(59,130,246,0.25)'}
+                      style={{ cursor: 'zoom-in', display: 'inline-block', borderRadius: '10px', overflow: 'hidden', border: '2px solid #e2e8f0', boxShadow: 'none', transition: 'box-shadow 0.2s' }}
+                      onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(16,185,129,0.25)'}
                       onMouseLeave={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'}
                       title="Click to view full size"
                     >
@@ -321,7 +321,7 @@ export default function TicketDetailsModal({
                       <>
                         {service.status !== 'CUSTOMER OUTWARD' && service.status !== 'COMPLETED' ? (
                           <button
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#eff6ff', color: '#3b82f6', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#ecfdf5', color: '#10b981', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
                             onClick={(e) => {
                               e.stopPropagation();
                               setAdvancingItem(service);

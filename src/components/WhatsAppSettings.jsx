@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Smartphone, RefreshCw, CheckCircle, AlertCircle, LogOut } from 'lucide-react';
+import { Smartphone, RefreshCw, CheckCircle, AlertCircle, LogOut, Wifi, WifiOff } from 'lucide-react';
 import axios from 'axios';
+import Spinner from './Spinner';
 
 export default function WhatsAppSettings() {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -84,99 +85,187 @@ export default function WhatsAppSettings() {
   };
 
   return (
-    <div style={{ maxWidth: '600px', margin: '40px auto', backgroundColor: '#fff', padding: '32px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <div style={{ backgroundColor: '#22c55e', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Smartphone color="white" size={28} />
-        </div>
-        <div>
-          <h2 style={{ margin: 0, fontSize: '24px', color: '#0f172a' }}>WhatsApp Connection</h2>
-          <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '14px' }}>Link your device to automatically send PDF reports.</p>
+    <div style={{ maxWidth: 640, margin: '0 auto' }}>
+
+      {/* ── Page Header ── */}
+      <div className="header" style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12,
+            background: 'linear-gradient(135deg, #22C55E, #16A34A)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: 'none',
+          }}>
+            <Smartphone size={20} color="#fff" />
+          </div>
+          <div>
+            <h1 className="page-title" style={{ fontSize: 22 }}>WhatsApp Integration</h1>
+            <p className="page-subtitle">Link your device to send PDF reports automatically</p>
+          </div>
         </div>
       </div>
 
-      {status === 'loading' && (
-        <div style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>
-          <RefreshCw className="spin" size={24} style={{ marginBottom: '8px' }} />
-          <div>Checking connection status...</div>
+      {/* ── Status Card ── */}
+      <div style={{
+        background: 'var(--surface)',
+        borderRadius: 'var(--radius-lg)',
+        border: '1px solid var(--border)',
+        boxShadow: 'none',
+        overflow: 'hidden',
+      }}>
+
+        {/* Status indicator strip */}
+        <div style={{
+          padding: '14px 24px',
+          background: status === 'connected' ? 'var(--success-light)' : status === 'error' ? 'var(--error-light)' : 'var(--surface-hover)',
+          borderBottom: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          {status === 'connected' ? (
+            <><Wifi size={16} color="var(--success)" /><span style={{ fontSize: 13, fontWeight: 600, color: '#15803D' }}>Connected</span></>
+          ) : status === 'loading' ? (
+            <><Spinner size="xs" variant="muted" /><span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Checking status…</span></>
+          ) : status === 'error' ? (
+            <><WifiOff size={16} color="var(--error)" /><span style={{ fontSize: 13, fontWeight: 600, color: 'var(--error)' }}>Connection Error</span></>
+          ) : (
+            <><WifiOff size={16} color="var(--text-muted)" /><span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Not Connected</span></>
+          )}
         </div>
-      )}
 
-      {(status === 'idle' || status === 'pairing' || status === 'error') && (
-        <form onSubmit={handleConnect} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>Admin Phone Number (with Country Code)</label>
-            <input
-              type="text"
-              placeholder="e.g. 919876543210"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '15px' }}
-              disabled={loading}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading || !phoneNumber}
-            style={{
-              backgroundColor: '#25D366', color: 'white', padding: '12px', borderRadius: '8px', border: 'none',
-              fontSize: '15px', fontWeight: 600, cursor: loading || !phoneNumber ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: loading || !phoneNumber ? 0.7 : 1
-            }}
-          >
-            {loading ? <RefreshCw className="spin" size={18} /> : "Connect WhatsApp"}
-          </button>
-        </form>
-      )}
+        <div style={{ padding: 28 }}>
 
-      {status === 'pairing' && (
-        <div style={{ backgroundColor: '#f8fafc', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-          <h3 style={{ margin: '0 0 12px 0', color: '#0f172a' }}>Pairing Code Generated!</h3>
-          <div style={{ letterSpacing: '8px', fontSize: '32px', fontWeight: 'bold', color: '#3b82f6', marginBottom: '16px', padding: '16px', backgroundColor: '#fff', borderRadius: '8px', border: '2px dashed #cbd5e1' }}>
-            {pairingCode}
-          </div>
-          <p style={{ margin: 0, color: '#475569', fontSize: '14px', lineHeight: '1.5' }}>
-            1. Open WhatsApp on your phone.<br/>
-            2. Tap Menu (⋮) or Settings &gt; <strong>Linked Devices</strong>.<br/>
-            3. Tap <strong>Link a Device</strong>.<br/>
-            4. Tap <strong>Link with phone number instead</strong>.<br/>
-            5. Enter the code above.<br/>
-            <br/>
-            <em>Once linked, refresh this page to see the updated status.</em>
-          </p>
+          {/* Loading */}
+          {status === 'loading' && (
+            <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)' }}>
+              <Spinner size="md" variant="primary" label="Checking connection…" />
+            </div>
+          )}
+
+          {/* Idle / Error — Connect Form */}
+          {(status === 'idle' || status === 'pairing' || status === 'error') && (
+            <form onSubmit={handleConnect} style={{ display: 'flex', flexDirection: 'column', gap: 18, marginBottom: status === 'pairing' || status === 'error' ? 24 : 0 }}>
+              <div className="form-group">
+                <label className="form-label">Admin Phone Number (with Country Code)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 919876543210"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="form-input"
+                  disabled={loading}
+                />
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                  Format: country code + number (no spaces/dashes)
+                </p>
+              </div>
+              <button
+                type="submit"
+                disabled={loading || !phoneNumber}
+                style={{
+                  background: loading || !phoneNumber
+                    ? 'var(--border)'
+                    : 'linear-gradient(135deg, #22C55E, #16A34A)',
+                  color: loading || !phoneNumber ? 'var(--text-muted)' : 'white',
+                  padding: '12px 20px', borderRadius: 'var(--radius-sm)',
+                  border: 'none', fontSize: 14, fontWeight: 700,
+                  cursor: loading || !phoneNumber ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+                  boxShadow: loading || !phoneNumber ? 'none' : '0 4px 14px rgba(34,197,94,0.35)',
+                  transition: 'all 0.2s', fontFamily: 'Inter, sans-serif',
+                  opacity: loading || !phoneNumber ? 0.6 : 1,
+                }}
+              >
+                {loading ? <Spinner size="xs" variant="white" /> : <Smartphone size={17} />}
+                {loading ? 'Connecting…' : 'Connect WhatsApp'}
+              </button>
+            </form>
+          )}
+
+          {/* Pairing Code */}
+          {status === 'pairing' && (
+            <div style={{
+              background: 'var(--primary-light)',
+              border: '1.5px solid rgba(4,120,87,0.2)',
+              borderRadius: 'var(--radius)',
+              padding: 24, textAlign: 'center',
+            }}>
+              <p style={{ margin: '0 0 14px', fontSize: 13, fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Pairing Code Generated
+              </p>
+              <div style={{
+                letterSpacing: 10, fontSize: 34, fontWeight: 800,
+                color: 'var(--primary)', padding: '16px 24px',
+                background: 'var(--surface)', borderRadius: 'var(--radius-sm)',
+                border: '2px dashed var(--border)', marginBottom: 20,
+                fontFamily: 'monospace',
+              }}>
+                {pairingCode}
+              </div>
+              <div style={{ textAlign: 'left', fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 2 }}>
+                <p style={{ margin: '0 0 4px', fontWeight: 600, color: 'var(--text-primary)' }}>Steps to link:</p>
+                <ol style={{ margin: 0, paddingLeft: 18 }}>
+                  <li>Open WhatsApp on your phone</li>
+                  <li>Tap Menu (⋮) or Settings → <strong>Linked Devices</strong></li>
+                  <li>Tap <strong>Link a Device</strong></li>
+                  <li>Tap <strong>Link with phone number instead</strong></li>
+                  <li>Enter the code above</li>
+                </ol>
+                <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  Refresh this page once linked to see updated status.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Connected */}
+          {status === 'connected' && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, textAlign: 'center', padding: '8px 0 16px' }}>
+              <div style={{
+                width: 72, height: 72, borderRadius: '50%',
+                background: 'var(--success-light)',
+                border: '3px solid var(--success-border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <CheckCircle size={36} color="var(--success)" />
+              </div>
+              <div>
+                <h3 style={{ margin: '0 0 6px', color: '#15803D', fontSize: 18, fontWeight: 700 }}>WhatsApp Connected</h3>
+                <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 14 }}>
+                  Linked to: <strong style={{ color: 'var(--text-primary)' }}>{connectedNumber}</strong>
+                </p>
+              </div>
+              <button
+                onClick={handleLogout}
+                disabled={loading}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '10px 20px', borderRadius: 'var(--radius-sm)',
+                  background: 'var(--error-light)', border: '1.5px solid var(--error-border)',
+                  color: 'var(--error)', fontSize: 13.5, fontWeight: 600,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.7 : 1, transition: 'all 0.18s',
+                  fontFamily: 'Inter, sans-serif',
+                }}
+              >
+                {loading ? <Spinner size="xs" variant="muted" /> : <LogOut size={16} />}
+                Disconnect Session
+              </button>
+            </div>
+          )}
+
+          {/* Error message */}
+          {status === 'error' && message && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              background: 'var(--error-light)', border: '1.5px solid var(--error-border)',
+              borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginTop: 16,
+            }}>
+              <AlertCircle size={20} color="var(--error)" style={{ flexShrink: 0 }} />
+              <span style={{ color: '#991B1B', fontWeight: 500, fontSize: 13.5 }}>{message}</span>
+            </div>
+          )}
         </div>
-      )}
-
-      {status === 'connected' && (
-        <div style={{ backgroundColor: '#f0fdf4', padding: '24px', borderRadius: '12px', border: '1px solid #bbf7d0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', textAlign: 'center' }}>
-          <CheckCircle color="#22c55e" size={48} />
-          <div>
-            <h3 style={{ margin: '0 0 8px 0', color: '#166534', fontSize: '20px' }}>Connected to WhatsApp</h3>
-            <p style={{ margin: 0, color: '#15803d', fontSize: '15px' }}>Number: <strong>{connectedNumber}</strong></p>
-          </div>
-          
-          <button
-            onClick={handleLogout}
-            disabled={loading}
-            style={{
-              marginTop: '8px', backgroundColor: '#fee2e2', color: '#b91c1c', padding: '10px 16px', borderRadius: '8px', border: '1px solid #fecaca',
-              fontSize: '14px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: loading ? 0.7 : 1
-            }}
-          >
-            {loading ? <RefreshCw className="spin" size={16} /> : <LogOut size={16} />}
-            Logout Session
-          </button>
-        </div>
-      )}
-
-      {status === 'error' && (
-        <div style={{ backgroundColor: '#fef2f2', padding: '16px', borderRadius: '8px', border: '1px solid #fecaca', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <AlertCircle color="#ef4444" size={24} />
-          <div style={{ color: '#991b1b', fontWeight: 500 }}>{message}</div>
-        </div>
-      )}
-
+      </div>
     </div>
   );
 }
