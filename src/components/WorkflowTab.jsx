@@ -4,7 +4,7 @@ import { useTickets } from '../api/hooks';
 import { SkeletonLoader } from './Spinner';
 
 export default function WorkflowTab({
-  setAdvancingItem, setAdvanceDate, setNewSerialNumber, setCourierCharge,
+  setAdvancingItem, setAdvanceDate, setNewSerialNumber, setDocketNumber, setCourierCharge,
   getTodayDate, handleGenerateReport, generatingReportId, setViewingItem, userRole
 }) {
   const { data: recentActivities = [], isLoading } = useTickets();
@@ -232,6 +232,7 @@ export default function WorkflowTab({
                                 setAdvancingItem(mainItem);
                                 setAdvanceDate(getTodayDate());
                                 setNewSerialNumber('');
+                                if (setDocketNumber) setDocketNumber('');
                                 setCourierCharge('');
                               }}
                               title="Advance to next stage"

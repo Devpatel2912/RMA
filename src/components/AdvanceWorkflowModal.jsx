@@ -3,17 +3,51 @@ import { Camera, Upload, X } from 'lucide-react';
 import CameraCapture from './CameraCapture';
 import { generateTicketPDF } from '../utils/pdfGenerator';
 
+const MAX_VENDOR_INWARD_IMAGES = 3;
+
 export default function AdvanceWorkflowModal({
   advancingItem, setAdvancingItem,
   shippingImagePreview, setShippingImagePreview,
+  vendorInwardImages, setVendorInwardImages,
   advanceDate, setAdvanceDate,
   newSerialNumber, setNewSerialNumber,
+  docketNumber, setDocketNumber,
   courierCharge, setCourierCharge,
   customMessage, setCustomMessage,
   confirmAdvanceStatus
 }) {
   const [isDocketCameraOpen, setIsDocketCameraOpen] = useState(false);
   const [isProductCameraOpen, setIsProductCameraOpen] = useState(false);
+
+  const addVendorInwardImages = (images) => {
+    const currentImages = vendorInwardImages || [];
+    const availableSlots = MAX_VENDOR_INWARD_IMAGES - currentImages.length;
+
+    if (availableSlots <= 0) {
+      alert(`You can upload only ${MAX_VENDOR_INWARD_IMAGES} product images.`);
+      return;
+    }
+
+    const imagesToAdd = images.slice(0, availableSlots);
+    setVendorInwardImages([...currentImages, ...imagesToAdd]);
+
+    if (images.length > availableSlots) {
+      alert(`Only ${MAX_VENDOR_INWARD_IMAGES} product images are allowed.`);
+    }
+  };
+
+  const handlePrint = () => {
+    const printItem = { ...advancingItem };
+    if (docketNumber) printItem.docketNumber = docketNumber;
+    if (courierCharge) printItem.courierCharge = courierCharge;
+    if (shippingImagePreview) printItem.outwardImageURL = shippingImagePreview;
+    if (vendorInwardImages && vendorInwardImages.length > 0) {
+      printItem.vendorInwardImageURL = JSON.stringify(vendorInwardImages);
+    }
+    if (newSerialNumber) printItem.serialNumber = newSerialNumber;
+    
+    generateTicketPDF(advancingItem.status, printItem);
+  };
 
   if (!advancingItem) return null;
 
@@ -61,7 +95,11 @@ export default function AdvanceWorkflowModal({
                   </div>
                   <div className="detail-item">
                     <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Date</span>
-                    <input type="date" className="form-input" style={{ padding: '6px', fontSize: '14px', border: '1px solid #e2e8f0', borderRadius: '4px' }} value={advanceDate} onChange={(e) => setAdvanceDate(e.target.value)} />
+                    <input type="date" className="form-input" style={{ padding: '6px', fontSize: '14px', border: '1px solid #e2e8f0', borderRadius: '4px', width: '100%' }} value={advanceDate} onChange={(e) => setAdvanceDate(e.target.value)} />
+                  </div>
+                  <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Courier Charge</label>
+                    <input type="text" className="form-input" style={{ padding: '8px', fontSize: '14px', width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px' }} placeholder="e.g. ₹150" value={courierCharge} onChange={(e) => setCourierCharge(e.target.value)} />
                   </div>
                 </div>
               </div>
@@ -74,7 +112,17 @@ export default function AdvanceWorkflowModal({
               )}
 
               <div className="form-group" style={{ marginBottom: '16px' }}>
-                <label className="form-label" style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Upload Docket Number</label>
+                <label className="form-label" style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Docket Number</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ padding: '8px', fontSize: '14px', width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px', marginBottom: '12px' }}
+                  placeholder="Enter docket number..."
+                  value={docketNumber}
+                  onChange={(e) => setDocketNumber(e.target.value)}
+                />
+                
+                <label className="form-label" style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Upload Docket Image</label>
                 {isDocketCameraOpen ? (
                   <CameraCapture 
                     onCapture={(file) => {
@@ -131,7 +179,7 @@ export default function AdvanceWorkflowModal({
 
               <button
                 type="button"
-                onClick={() => generateTicketPDF(advancingItem.status, advancingItem)}
+                onClick={handlePrint}
                 style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#0f172a', fontWeight: 600, cursor: 'pointer', marginBottom: '16px' }}
               >
                 Print Ticket
@@ -172,12 +220,12 @@ export default function AdvanceWorkflowModal({
               </div>
 
               <div className="form-group" style={{ marginBottom: '16px' }}>
-                <label className="form-label" style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Upload Product Image</label>
+                <label className="form-label" style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Upload Product Images</label>
                 {isProductCameraOpen ? (
                   <CameraCapture 
                     onCapture={(file) => {
                       const reader = new FileReader();
-                      reader.onload = (event) => setShippingImagePreview(event.target.result);
+                      reader.onload = (event) => addVendorInwardImages([event.target.result]);
                       reader.readAsDataURL(file);
                       setIsProductCameraOpen(false);
                     }}
@@ -193,16 +241,26 @@ export default function AdvanceWorkflowModal({
                       <input
                         type="file"
                         accept="image/*"
+                        multiple
                         style={{ display: 'none' }}
                         onChange={(e) => {
-                          const file = e.target.files[0];
-                          if (file) {
+                          const files = Array.from(e.target.files);
+                          const uploadedImages = [];
+                          let loadedCount = 0;
+
+                          if (files.length === 0) return;
+
+                          files.forEach(file => {
                             const reader = new FileReader();
-                            reader.onload = (event) => setShippingImagePreview(event.target.result);
+                            reader.onload = (event) => {
+                              uploadedImages.push(event.target.result);
+                              loadedCount += 1;
+                              if (loadedCount === files.length) {
+                                addVendorInwardImages(uploadedImages);
+                              }
+                            };
                             reader.readAsDataURL(file);
-                          } else {
-                            setShippingImagePreview(null);
-                          }
+                          });
                         }}
                       />
                     </label>
@@ -210,26 +268,30 @@ export default function AdvanceWorkflowModal({
                 )}
               </div>
 
-              {shippingImagePreview && !isProductCameraOpen && (
+              {vendorInwardImages && vendorInwardImages.length > 0 && !isProductCameraOpen && (
                 <div style={{ marginBottom: '16px' }}>
-                  <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Image Preview</span>
-                  <div style={{ position: 'relative', display: 'inline-block' }}>
-                    <img src={shippingImagePreview} alt="Product Preview" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
-                    <button 
-                      type="button"
-                      onClick={() => setShippingImagePreview(null)}
-                      style={{ position: 'absolute', top: '-8px', right: '-8px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: 'none' }}
-                      title="Remove image"
-                    >
-                      <X size={14} />
-                    </button>
+                  <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Image Previews</span>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {vendorInwardImages.map((imgSrc, index) => (
+                      <div key={index} style={{ position: 'relative', display: 'inline-block' }}>
+                        <img src={imgSrc} alt={`Preview ${index + 1}`} style={{ maxWidth: '100px', maxHeight: '100px', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                        <button 
+                          type="button"
+                          onClick={() => setVendorInwardImages(prev => prev.filter((_, i) => i !== index))}
+                          style={{ position: 'absolute', top: '-8px', right: '-8px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: 'none' }}
+                          title="Remove image"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
 
               <button
                 type="button"
-                onClick={() => generateTicketPDF(advancingItem.status, advancingItem)}
+                onClick={handlePrint}
                 style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#0f172a', fontWeight: 600, cursor: 'pointer', marginBottom: '16px' }}
               >
                 Print Ticket
@@ -260,7 +322,11 @@ export default function AdvanceWorkflowModal({
                 </div>
                 <div className="detail-item">
                   <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Transition Date</span>
-                  <input type="date" className="form-input" style={{ padding: '6px', fontSize: '14px', border: '1px solid #e2e8f0', borderRadius: '4px' }} value={advanceDate} onChange={(e) => setAdvanceDate(e.target.value)} />
+                  <input type="date" className="form-input" style={{ padding: '6px', fontSize: '14px', border: '1px solid #e2e8f0', borderRadius: '4px', width: '100%' }} value={advanceDate} onChange={(e) => setAdvanceDate(e.target.value)} />
+                </div>
+                <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Courier Charge</label>
+                  <input type="text" className="form-input" style={{ padding: '8px', fontSize: '14px', width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px' }} placeholder="e.g. ₹150" value={courierCharge} onChange={(e) => setCourierCharge(e.target.value)} />
                 </div>
                 <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
                   <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Message to Customer (Optional)</label>
@@ -279,7 +345,7 @@ export default function AdvanceWorkflowModal({
         </div>
 
         <div className="advance-modal-footer">
-          <button className="btn-text-cancel" onClick={() => { setAdvancingItem(null); setShippingImagePreview(null); }}>Cancel</button>
+          <button className="btn-text-cancel" onClick={() => { setAdvancingItem(null); setShippingImagePreview(null); if (setVendorInwardImages) setVendorInwardImages([]); }}>Cancel</button>
           <button className="btn-confirm" onClick={confirmAdvanceStatus}>Confirm Transition</button>
         </div>
       </div>

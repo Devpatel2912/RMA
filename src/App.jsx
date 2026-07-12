@@ -67,7 +67,10 @@ function App() {
   const [shippingImagePreview, setShippingImagePreview] = useState(null);
   const [advanceDate, setAdvanceDate] = useState('');
   const [newSerialNumber, setNewSerialNumber] = useState('');
+  const [docketNumber, setDocketNumber] = useState('');
   const [courierCharge, setCourierCharge] = useState('');
+  
+  const [vendorInwardImages, setVendorInwardImages] = useState([]);
   const [customMessage, setCustomMessage] = useState('');
   const [generatingReportId, setGeneratingReportId] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-US', { hour12: false }));
@@ -270,7 +273,18 @@ function App() {
     }
   };
 
-  const confirmAdvanceStatus = () => {
+  const handleOpenAdvanceModal = async (item) => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+      const res = await axios.get(`${baseUrl}/tickets/${item.id}`);
+      setAdvancingItem(res.data);
+    } catch (err) {
+      console.error("Failed to fetch full ticket details:", err);
+      setAdvancingItem(item);
+    }
+  };
+
+  const confirmAdvanceStatus = async () => {
     if (!advancingItem) return;
 
     let newStatus, newClass;
@@ -309,19 +323,31 @@ function App() {
       updateData.serialNumber = newSerialNumber;
       updateData.oldSerialNumber = advancingItem.serialNumber;
     }
+    if (docketNumber) {
+      updatedItem.docketNumber = docketNumber;
+      updateData.docketNumber = docketNumber;
+    }
     if (courierCharge) {
       updatedItem.courierCharge = courierCharge;
       updateData.courierCharge = courierCharge;
     }
-    if (shippingImagePreview) {
-      if (advancingItem.status === 'VENDOR OUTWARD') {
+    if (advancingItem.status === 'VENDOR OUTWARD') {
+      if (shippingImagePreview) {
         updatedItem.outwardImageURL = shippingImagePreview;
         updateData.outwardImageURL = shippingImagePreview;
-      } else if (advancingItem.status === 'VENDOR INWARD') {
-        updatedItem.vendorInwardImageURL = shippingImagePreview;
-        updateData.vendorInwardImageURL = shippingImagePreview;
+      }
+      updatedItem.docketNumber = docketNumber;
+      updateData.docketNumber = docketNumber;
+      updatedItem.courierCharge = courierCharge;
+      updateData.courierCharge = courierCharge;
+    } else if (advancingItem.status === 'VENDOR INWARD') {
+      if (vendorInwardImages && vendorInwardImages.length > 0) {
+        const imgsString = JSON.stringify(vendorInwardImages);
+        updatedItem.vendorInwardImageURL = imgsString;
+        updateData.vendorInwardImageURL = imgsString;
       }
     }
+
 
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
     
@@ -360,15 +386,17 @@ function App() {
       // The WhatsApp PDF is generated and sent by the backend.
       // We no longer auto-download the PDF on the frontend here.
     } else if (advancingItem.status === 'VENDOR INWARD') {
-      // Transitioning to CUSTOMER OUTWARD -> Send PDF to Customer Only
+      // Transitioning to CUSTOMER OUTWARD -> Send Text to Customer Only
       const itemToSend = updatedItem || advancingItem;
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
 
-      // Send PDF to Customer
-      axios.post(`${baseUrl}/whatsapp/send-pdf`, { ticketData: itemToSend, message: customMessage })
-        .then(res => console.log("WhatsApp PDF Sent to Customer:", res.data))
+      const staticMsg = customMessage || `Hello ${itemToSend.name}, your RMA ticket (${itemToSend.rma}) is ready for dispatch from our vendor.`;
+
+      // Send Text to Customer
+      axios.post(`${baseUrl}/whatsapp/send-text`, { vendorPhone: itemToSend.contactNumber, text: staticMsg })
+        .then(res => console.log("WhatsApp Text Sent to Customer:", res.data))
         .catch(err => {
-          console.error("Failed to send WhatsApp PDF to Customer:", err);
+          console.error("Failed to send WhatsApp Text to Customer:", err);
           alert("Customer WhatsApp failed: " + (err.response?.data?.error || err.message));
         });
     }
@@ -415,6 +443,29 @@ function App() {
     } catch (err) {
       console.error("Failed to process report:", err);
       alert("Failed to process report.");
+    } finally {
+      setGeneratingReportId(null);
+    }
+  };
+
+  const handleSendWhatsAppReport = async (item, messageText) => {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+    setGeneratingReportId(item.id);
+    try {
+      const res = await axios.get(`${baseUrl}/tickets/${item.id}`);
+      const fullItem = res.data;
+      const staticMsg = messageText || `Hello ${fullItem.name}, your RMA ticket (${fullItem.rma}) has been completed. Please collect your product.`;
+
+      await axios.post(`${baseUrl}/whatsapp/send-text`, {
+        vendorPhone: fullItem.contactNumber,
+        text: staticMsg
+      });
+
+      alert("WhatsApp message sent successfully.");
+    } catch (err) {
+      console.error("Failed to send WhatsApp message:", err);
+      alert("WhatsApp message failed: " + (err.response?.data?.error || err.message));
+      throw err;
     } finally {
       setGeneratingReportId(null);
     }
@@ -649,9 +700,11 @@ function App() {
 
           {activeTab === 'workflow' && (
             <WorkflowTab 
-              setAdvancingItem={setAdvancingItem}
+              recentActivities={recentActivities}
+              setAdvancingItem={handleOpenAdvanceModal}
               setAdvanceDate={setAdvanceDate}
               setNewSerialNumber={setNewSerialNumber}
+              setDocketNumber={setDocketNumber}
               setCourierCharge={setCourierCharge}
               getTodayDate={getTodayDate}
               handleGenerateReport={handleGenerateReport}
@@ -721,9 +774,11 @@ function App() {
         setAdvancingItem={setAdvancingItem}
         setAdvanceDate={setAdvanceDate}
         setNewSerialNumber={setNewSerialNumber}
+        setDocketNumber={setDocketNumber}
         setCourierCharge={setCourierCharge}
         getTodayDate={getTodayDate}
         handleGenerateReport={handleGenerateReport}
+        handleSendWhatsAppReport={handleSendWhatsAppReport}
         userRole={userRole}
       />
 
@@ -732,10 +787,14 @@ function App() {
         setAdvancingItem={setAdvancingItem}
         shippingImagePreview={shippingImagePreview}
         setShippingImagePreview={setShippingImagePreview}
+        vendorInwardImages={vendorInwardImages}
+        setVendorInwardImages={setVendorInwardImages}
         advanceDate={advanceDate}
         setAdvanceDate={setAdvanceDate}
         newSerialNumber={newSerialNumber}
         setNewSerialNumber={setNewSerialNumber}
+        docketNumber={docketNumber}
+        setDocketNumber={setDocketNumber}
         courierCharge={courierCharge}
         setCourierCharge={setCourierCharge}
         customMessage={customMessage}

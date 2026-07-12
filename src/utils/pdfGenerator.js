@@ -264,6 +264,85 @@ export const generateTicketPDF = (stageName, ticket) => {
     y += 15;
     doc.text('(Authorised Signatory)', margin + cW - 5, y, { align: 'right' });
     
+  } else if (stage === 'VENDOR OUTWARD') {
+    // ═══════════════════════════════════════════════════════════
+    // VENDOR OUTWARD: SPECIFIC RECEIPT
+    // ═══════════════════════════════════════════════════════════
+
+    y += 15;
+    font('bold', 10);
+    doc.text('Ticket / RMA No :', margin + 5, y);
+    font('normal', 10); doc.text(ticket.rma || 'N/A', margin + 110, y);
+    
+    font('bold', 10);
+    doc.text('Date :', margin + cW - 100, y);
+    font('normal', 10); doc.text(ticket.date || 'N/A', margin + cW - 50, y);
+    y += 10;
+    ln(margin, y, margin + cW, y);
+
+    // Vendor Details
+    y += 20;
+    font('bold', 12); doc.text('Vendor Details', margin + 5, y);
+    y += 15;
+    font('bold', 10);
+    doc.text('Vendor :', margin + 5, y);
+    font('normal', 10); doc.text(ticket.serviceVendor || ticket.vendor || 'N/A', margin + 110, y);
+    y += 20;
+    ln(margin, y, margin + cW, y);
+
+    // Product Details
+    y += 20;
+    font('bold', 12); doc.text('Product Information', margin + 5, y);
+    y += 15;
+    font('bold', 10);
+    doc.text('Product Name :', margin + 5, y);
+    font('normal', 10); doc.text(ticket.product || 'N/A', margin + 110, y);
+    font('bold', 10);
+    doc.text('Category :', margin + cW / 2, y);
+    font('normal', 10); doc.text(ticket.category || 'N/A', margin + cW / 2 + 80, y);
+    y += 20;
+    font('bold', 10);
+    doc.text('Serial No (Old) :', margin + 5, y);
+    font('normal', 10); doc.text(ticket.serialNumber || 'N/A', margin + 110, y);
+
+    if (ticket.newSerialNumber) {
+      font('bold', 10);
+      doc.text('Serial No (New) :', margin + cW / 2, y);
+      font('normal', 10); doc.text(ticket.newSerialNumber, margin + cW / 2 + 100, y);
+    }
+    y += 30;
+    ln(margin, y, margin + cW, y);
+
+    // Problem Description
+    y += 20;
+    font('bold', 12); doc.text('Problem Description', margin + 5, y);
+    y += 15;
+    font('normal', 10);
+    const descLines = doc.splitTextToSize(ticket.description || 'No description provided.', cW - 10);
+    doc.text(descLines, margin + 5, y);
+
+    y += (descLines.length * 15) + 20;
+    ln(margin, y, margin + cW, y);
+
+    // Shipping/Docket
+    if (ticket.docketNumber) {
+      y += 20;
+      font('bold', 12); doc.text('Shipping Details', margin + 5, y);
+      y += 15;
+      font('bold', 10);
+      doc.text('Docket Number :', margin + 5, y);
+      font('normal', 10); doc.text(ticket.docketNumber, margin + 110, y);
+      y += 20;
+      ln(margin, y, margin + cW, y);
+    }
+
+    // Footer Signature
+    const footerY = yStart + 700;
+    font('bold', 10);
+    doc.text('For, AVXPERTS', margin + cW - 5, footerY, { align: 'right' });
+    font('normal', 10);
+    doc.text('(Authorised Signatory)', margin + cW - 5, footerY + 40, { align: 'right' });
+
   } else {
     // ═══════════════════════════════════════════════════════════
     // EARLY STAGE: SIMPLE RECEIPT
@@ -355,15 +434,11 @@ export const generateTicketPDF = (stageName, ticket) => {
     doc.text('(Authorised Signatory)', margin + cW - 5, footerY + 40, { align: 'right' });
   }
 
-  // Add Images on a new page if COMPLETED (optional based on your old logic)
-  if (stage === 'COMPLETED') {
-    let imagesAdded = false;
+  // Add Images on new pages for reports that include image evidence.
+  if (stage === 'COMPLETED' || stage === 'VENDOR OUTWARD' || stage === 'VENDOR INWARD') {
     const addImageToDoc = (title, b64) => {
       if (!b64) return;
-      if (!imagesAdded) {
-        doc.addPage();
-        imagesAdded = true;
-      }
+      doc.addPage();
       doc.setFontSize(14);
       doc.text(title, margin, 40);
       try {
@@ -373,9 +448,32 @@ export const generateTicketPDF = (stageName, ticket) => {
         doc.text("Error loading image.", margin, 60);
       }
     };
-    if (ticket.inwardImageURL) addImageToDoc('Inward Condition', ticket.inwardImageURL);
-    if (ticket.vendorInwardImageURL) addImageToDoc('Vendor Return/Docket', ticket.vendorInwardImageURL);
-    if (ticket.outwardImageURL) addImageToDoc('Final Outward Condition', ticket.outwardImageURL);
+    
+    const addVendorInwardImages = () => {
+      if (!ticket.vendorInwardImageURL) return;
+
+      try {
+        const parsed = JSON.parse(ticket.vendorInwardImageURL);
+        if (Array.isArray(parsed)) {
+          parsed.slice(0, 3).forEach((img, i) => addImageToDoc(`Vendor Inward Product Image ${i + 1}`, img));
+        } else {
+          addImageToDoc('Vendor Inward Product Image', ticket.vendorInwardImageURL);
+        }
+      } catch(e) {
+        addImageToDoc('Vendor Inward Product Image', ticket.vendorInwardImageURL);
+      }
+    };
+
+    if (stage === 'VENDOR OUTWARD') {
+      if (ticket.inwardImageURL) addImageToDoc('Product Image', ticket.inwardImageURL);
+      if (ticket.outwardImageURL) addImageToDoc('Docket Image', ticket.outwardImageURL);
+    } else if (stage === 'VENDOR INWARD') {
+      addVendorInwardImages();
+    } else {
+      if (ticket.inwardImageURL) addImageToDoc('Inward Condition', ticket.inwardImageURL);
+      addVendorInwardImages();
+      if (ticket.outwardImageURL) addImageToDoc('Final Outward Condition', ticket.outwardImageURL);
+    }
   }
 
   doc.autoPrint();

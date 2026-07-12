@@ -1,8 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Plus, Eye, Save, Upload, ChevronDown, Search, ArrowRightCircle, Share, Edit2, Trash2 } from 'lucide-react';
+import { X, Plus, Eye, Save, Upload, ChevronDown, Search, ArrowRightCircle, Share, Edit2, Trash2, MessageCircle } from 'lucide-react';
 import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCategories, useVendors, useTicket } from '../api/hooks';
+
+const buildWhatsAppMessage = (ticket) => (
+  `Dear ${ticket.name || 'Customer'},\n\n` +
+  `Your RMA ticket ${ticket.rma || ''} for ${ticket.product || 'your product'} is ready.\n` +
+  `Current status: ${ticket.status || 'N/A'}.\n` +
+  `Serial No: ${ticket.serialNumber || 'N/A'}.\n\n` +
+  `Thanks,\nAVXPERTS`
+);
 
 const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -70,7 +78,7 @@ const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
 
 export default function TicketDetailsModal({ 
   viewingItem, setViewingItem, onSaveInlineService,
-  setAdvancingItem, setAdvanceDate, setNewSerialNumber, setCourierCharge, getTodayDate, handleGenerateReport, userRole
+  setAdvancingItem, setAdvanceDate, setNewSerialNumber, setDocketNumber, setCourierCharge, getTodayDate, handleGenerateReport, handleSendWhatsAppReport, userRole
 }) {
   const queryClient = useQueryClient();
   const { data: categories = [] } = useCategories();
@@ -91,6 +99,9 @@ export default function TicketDetailsModal({
 
   const [editingServiceId, setEditingServiceId] = useState(null);
   const [editData, setEditData] = useState({});
+  const [whatsAppFormatOpen, setWhatsAppFormatOpen] = useState(false);
+  const [whatsAppMessage, setWhatsAppMessage] = useState('');
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
 
   const handleDeleteService = async (serviceId) => {
     if (!window.confirm("Are you sure you want to delete this service?")) return;
@@ -129,6 +140,43 @@ export default function TicketDetailsModal({
 
   // Use fullTicket if available to get image data, otherwise fallback to viewingItem
   const service = fullTicket || viewingItem;
+  const whatsAppMessageKey = `rma-whatsapp-message-${service.id || service.rma || 'ticket'}`;
+
+  const openWhatsAppFormat = () => {
+    const savedMessage = localStorage.getItem(whatsAppMessageKey);
+    setWhatsAppMessage(savedMessage || buildWhatsAppMessage(service));
+    setWhatsAppFormatOpen(true);
+  };
+
+  const saveWhatsAppMessage = () => {
+    if (!whatsAppMessage.trim()) {
+      alert("Message body is required.");
+      return;
+    }
+
+    localStorage.setItem(whatsAppMessageKey, whatsAppMessage.trim());
+    alert("WhatsApp message saved.");
+  };
+
+  const sendWhatsAppMessage = async () => {
+    if (!service.contactNumber) {
+      alert("Customer mobile number is missing.");
+      return;
+    }
+
+    if (!whatsAppMessage.trim()) {
+      alert("Message body is required.");
+      return;
+    }
+
+    setIsSendingWhatsApp(true);
+    try {
+      await handleSendWhatsAppReport(service, whatsAppMessage.trim());
+      setWhatsAppFormatOpen(false);
+    } finally {
+      setIsSendingWhatsApp(false);
+    }
+  };
 
   const handleInlineImageChange = (e) => {
     const file = e.target.files[0];
@@ -327,21 +375,35 @@ export default function TicketDetailsModal({
                               setAdvancingItem(service);
                               setAdvanceDate(getTodayDate());
                               setNewSerialNumber('');
+                              if (setDocketNumber) setDocketNumber('');
                               setCourierCharge('');
                             }}
+                            title="Advance to next stage"
                           >
                             <ArrowRightCircle size={16} /> Advance Stage
                           </button>
                         ) : (
-                          <button
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleGenerateReport(service);
-                            }}
-                          >
-                            <Share size={16} /> Generate Final Report
-                          </button>
+                          <>
+                            <button
+                              style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleGenerateReport(service);
+                              }}
+                            >
+                              <Share size={16} /> Generate Final Report
+                            </button>
+                            <button
+                              style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#dcfce7', color: '#16a34a', border: '1px solid #86efac', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openWhatsAppFormat();
+                              }}
+                              title="Open WhatsApp format"
+                            >
+                              <MessageCircle size={16} /> WhatsApp
+                            </button>
+                          </>
                         )}
                         <button
                           style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#fefce8', color: '#eab308', border: '1px solid #fef08a', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
@@ -393,6 +455,81 @@ export default function TicketDetailsModal({
             <X size={32} />
           </button>
           <img src={previewImage} alt="Preview" style={{ maxWidth: '90%', maxHeight: '85vh', borderRadius: '8px', objectFit: 'contain' }} />
+        </div>
+      )}
+
+      {whatsAppFormatOpen && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.45)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+        >
+          <div style={{ width: '100%', maxWidth: '760px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: 'none', overflow: 'hidden' }}>
+            <div style={{ background: 'var(--primary)', color: 'white', padding: '8px 12px', fontWeight: 700, fontSize: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>WhatsApp Format</span>
+              <button
+                onClick={() => setWhatsAppFormatOpen(false)}
+                style={{ width: '24px', height: '24px', border: 'none', background: '#ef4444', color: 'white', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ padding: '12px', display: 'grid', gridTemplateColumns: '120px 1fr', gap: '8px 12px', alignItems: 'center', background: 'var(--surface)' }}>
+              <label style={{ fontSize: '13px', color: 'var(--text-primary)' }}>Profile Type</label>
+              <input value="Default" readOnly style={{ height: '30px', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 8px', background: 'var(--surface-hover)', color: 'var(--text-secondary)' }} />
+
+              <label style={{ fontSize: '13px', color: 'var(--text-primary)' }}>Profile ID</label>
+              <input value={service.rma || ''} readOnly style={{ height: '30px', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 8px', background: 'var(--surface-hover)', color: 'var(--text-secondary)' }} />
+
+              <label style={{ fontSize: '13px', color: 'var(--text-primary)' }}>Format Name</label>
+              <input value="RMA Customer Status" readOnly style={{ height: '30px', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 8px', background: 'var(--surface-hover)', color: 'var(--text-primary)' }} />
+
+              <label style={{ fontSize: '13px', color: 'var(--text-primary)' }}>Mobile No.</label>
+              <input value={service.contactNumber || ''} readOnly style={{ height: '30px', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 8px', background: 'var(--surface-hover)', color: 'var(--text-primary)' }} />
+
+              <label style={{ fontSize: '13px', color: 'var(--text-primary)', alignSelf: 'start', paddingTop: '8px' }}>Message Body</label>
+              <textarea
+                value={whatsAppMessage}
+                onChange={(e) => setWhatsAppMessage(e.target.value)}
+                rows={8}
+                style={{ resize: 'vertical', border: '1px solid var(--border)', borderRadius: '4px', padding: '8px', background: 'var(--surface-hover)', color: 'var(--text-primary)', fontFamily: 'Inter, sans-serif', fontSize: '13px', lineHeight: 1.5 }}
+              />
+
+              <label style={{ fontSize: '13px', color: 'var(--text-primary)' }}>Attachment</label>
+              <input value="STATIC MESSAGE" readOnly style={{ height: '30px', maxWidth: '320px', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 8px', background: 'var(--surface-hover)', color: 'var(--text-primary)' }} />
+
+              <label style={{ fontSize: '13px', color: 'var(--text-primary)' }}>File Type</label>
+              <input value="None" readOnly style={{ height: '30px', maxWidth: '320px', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 8px', background: 'var(--surface-hover)', color: 'var(--text-primary)' }} />
+
+              <label style={{ fontSize: '13px', color: 'var(--text-primary)' }}>Log Type</label>
+              <input value="Log Without Attachment" readOnly style={{ height: '30px', maxWidth: '320px', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 8px', background: 'var(--surface-hover)', color: 'var(--text-primary)' }} />
+
+              <label style={{ fontSize: '13px', color: 'var(--text-primary)' }}>Current Stage</label>
+              <input value={service.status || 'N/A'} readOnly style={{ height: '30px', maxWidth: '320px', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 8px', background: 'var(--surface-hover)', color: 'var(--text-primary)' }} />
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--border)', padding: '12px', display: 'flex', justifyContent: 'flex-end', gap: '10px', background: 'var(--surface-hover)' }}>
+              <button
+                onClick={() => setWhatsAppFormatOpen(false)}
+                style={{ border: '1px solid #cbd5e1', background: 'white', color: '#475569', borderRadius: '6px', padding: '8px 14px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveWhatsAppMessage}
+                style={{ border: '1px solid var(--primary)', background: 'var(--primary)', color: 'white', borderRadius: '6px', padding: '8px 14px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Save size={16} /> Save
+              </button>
+              <button
+                onClick={sendWhatsAppMessage}
+                disabled={isSendingWhatsApp}
+                style={{ border: '1px solid #16a34a', background: '#16a34a', color: 'white', borderRadius: '6px', padding: '8px 14px', fontWeight: 700, cursor: isSendingWhatsApp ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', opacity: isSendingWhatsApp ? 0.75 : 1 }}
+              >
+                <MessageCircle size={16} /> {isSendingWhatsApp ? 'Sending...' : 'Send WhatsApp'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

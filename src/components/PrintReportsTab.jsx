@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Printer, Search, CheckCircle2, Package, Truck, UserCheck, FileText } from 'lucide-react';
+import { Printer, Search, CheckCircle2, Package, Truck, UserCheck, FileText, Loader2 } from 'lucide-react';
 import { generateTicketPDF } from '../utils/pdfGenerator';
+import axios from 'axios';
 
 const STAGE_CONFIG = [
   {
@@ -41,30 +42,17 @@ const STAGE_CONFIG = [
   },
 ];
 
-const StageCard = ({ title, icon: Icon, isActive, printHandler, summary, accentColor, accentBg }) => (
-  <div
-    style={{
-      background: 'var(--surface)',
-      borderRadius: 'var(--radius-lg)',
-      border: `1.5px solid ${isActive ? `${accentColor}30` : 'var(--border)'}`,
-      overflow: 'hidden',
-      boxShadow: isActive ? `0 4px 20px ${accentColor}18` : 'var(--shadow-sm)',
-      opacity: isActive ? 1 : 0.55,
-      display: 'flex',
-      flexDirection: 'column',
-      transition: 'all 0.25s',
-      transform: isActive ? 'none' : 'none',
-      position: 'relative',
-    }}
-    onMouseEnter={e => { if (isActive) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 28px ${accentColor}28`; } }}
-    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = isActive ? `0 4px 20px ${accentColor}18` : 'var(--shadow-sm)'; }}
-  >
-    {/* Top accent bar */}
-    <div style={{ height: 3, background: isActive ? accentColor : 'var(--border)' }} />
-
-    <div style={{ padding: '20px 22px', flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* Icon + Title */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+function StageCard({ title, icon: Icon, isActive, summary, accentColor, accentBg, printHandler, isPrinting }) {
+  return (
+    <div style={{
+      background: 'var(--surface)', border: `1px solid ${isActive ? accentColor + '30' : 'var(--border)'}`,
+      borderRadius: 'var(--radius-md)', padding: 20,
+      display: 'flex', flexDirection: 'column', gap: 16,
+      opacity: isActive ? 1 : 0.6,
+      boxShadow: isActive ? '0 4px 20px rgba(0,0,0,0.03)' : 'none',
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{
           width: 44, height: 44, borderRadius: 10,
           background: isActive ? accentBg : 'var(--surface-hover)',
@@ -89,29 +77,31 @@ const StageCard = ({ title, icon: Icon, isActive, printHandler, summary, accentC
 
       {/* Print Button */}
       <button
-        onClick={isActive ? printHandler : undefined}
-        disabled={!isActive}
+        onClick={isActive && !isPrinting ? printHandler : undefined}
+        disabled={!isActive || isPrinting}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           width: '100%', padding: '10px 16px',
           background: isActive ? accentColor : 'var(--border)',
           color: isActive ? 'white' : 'var(--text-muted)',
           border: 'none', borderRadius: 'var(--radius-sm)',
-          fontWeight: 700, fontSize: 13, cursor: isActive ? 'pointer' : 'not-allowed',
+          fontWeight: 700, fontSize: 13, cursor: (isActive && !isPrinting) ? 'pointer' : 'not-allowed',
           transition: 'all 0.2s', fontFamily: 'Inter, sans-serif',
           boxShadow: isActive ? `0 3px 10px ${accentColor}35` : 'none',
+          opacity: isPrinting ? 0.7 : 1
         }}
       >
-        <Printer size={15} />
-        Print {title}
+        {isPrinting ? <Loader2 size={15} className="spin" /> : <Printer size={15} />}
+        {isPrinting ? 'Printing...' : `Print ${title}`}
       </button>
     </div>
-  </div>
-);
+  );
+}
 
 export default function PrintReportsTab({ recentActivities }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTicketId, setSelectedTicketId] = useState(null);
+  const [printingStage, setPrintingStage] = useState(null);
 
   const selectedTicket = recentActivities.find(t => t.id === selectedTicketId);
 
@@ -121,10 +111,24 @@ export default function PrintReportsTab({ recentActivities }) {
     const currentIndex = statuses.indexOf(ticket.status);
     return {
       hasCustomerInward: currentIndex >= 0,
-      hasVendorOutward: currentIndex >= 1,
-      hasVendorInward: currentIndex >= 2,
-      hasCustomerOutward: currentIndex >= 3 || ticket.status === 'COMPLETED',
+      hasVendorOutward: currentIndex >= 2,
+      hasVendorInward: currentIndex >= 3,
+      hasCustomerOutward: currentIndex >= 4,
     };
+  };
+
+  const handlePrint = async (stageName, ticket) => {
+    setPrintingStage(stageName);
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+      const res = await axios.get(`${baseUrl}/tickets/${ticket.id}`);
+      generateTicketPDF(stageName, res.data);
+    } catch(e) {
+      console.error("Failed to fetch full ticket details for print:", e);
+      generateTicketPDF(stageName, ticket);
+    } finally {
+      setPrintingStage(null);
+    }
   };
 
   const stageFlags = getStageStatus(selectedTicket);
@@ -279,7 +283,8 @@ export default function PrintReportsTab({ recentActivities }) {
                 summary={summary}
                 accentColor={accentColor}
                 accentBg={accentBg}
-                printHandler={() => generateTicketPDF(stageName, selectedTicket)}
+                isPrinting={printingStage === stageName}
+                printHandler={() => handlePrint(stageName, selectedTicket)}
               />
             ))}
           </div>
