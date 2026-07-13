@@ -390,93 +390,103 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
               {/* Camera Open */}
               {isCameraOpen ? (
                 <CameraCapture
-                  onCapture={file => { setFormData(prev => ({ ...prev, image: file })); setIsCameraOpen(false); }}
+                  onCapture={file => { setFormData(prev => ({ ...prev, images: [...(prev.images || []), file] })); setIsCameraOpen(false); }}
                   onCancel={() => setIsCameraOpen(false)}
                 />
-              ) : !formData.image ? (
-                <>
-                  {/* Drop zone */}
-                  <div style={{
-                    border: '2px dashed var(--border)',
-                    borderRadius: 'var(--radius)',
-                    padding: '28px 16px', textAlign: 'center',
-                    background: 'var(--surface)',
-                    marginBottom: 10,
-                    cursor: 'pointer',
-                    transition: 'all 0.18s',
-                  }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-light)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--surface)'; }}
-                  >
-                    <div style={{ width: 36, height: 36, borderRadius: 9, background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
-                      <Upload size={18} color="var(--text-muted)" />
-                    </div>
-                    <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                      Drag & drop product images<br />
-                      <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>JPEG, PNG up to 10MB</span>
-                    </p>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button
-                      type="button"
-                      onClick={() => setIsCameraOpen(true)}
-                      style={{
-                        flex: 1, padding: '9px 10px', border: '1.5px solid var(--border)',
-                        borderRadius: 8, cursor: 'pointer', background: 'var(--surface)',
-                        fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        transition: 'all 0.15s', fontFamily: 'Inter, sans-serif',
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-light)'; }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--surface)'; }}
-                    >
-                      <Camera size={14} /> Camera
-                    </button>
-                    <label
-                      style={{
-                        flex: 1, padding: '9px 10px', border: '1.5px solid var(--border)',
-                        borderRadius: 8, cursor: 'pointer', background: 'var(--surface)',
-                        fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        transition: 'all 0.15s', userSelect: 'none',
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-light)'; }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--surface)'; }}
-                    >
-                      <Upload size={14} /> Upload
-                      <input type="file" accept="image/*" style={{ display: 'none' }}
-                        onChange={e => setFormData(prev => ({ ...prev, image: e.target.files[0] }))}
-                      />
-                    </label>
-                  </div>
-                </>
               ) : (
-                /* Image Preview */
-                <div style={{ position: 'relative' }}>
-                  <img
-                    src={URL.createObjectURL(formData.image)}
-                    alt="Preview"
-                    style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)', display: 'block', objectFit: 'cover', maxHeight: 160 }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, image: null }))}
-                    style={{
-                      position: 'absolute', top: -8, right: -8,
-                      width: 26, height: 26, borderRadius: '50%',
-                      background: 'var(--error)', color: 'white',
-                      border: 'none', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: 'none',
-                    }}
-                  >
-                    <X size={13} />
-                  </button>
-                  <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--success)', fontWeight: 600 }}>
-                    ✓ {formData.image.name}
-                  </p>
-                </div>
+                <>
+                  {/* Previews if any */}
+                  {formData.images && formData.images.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                      {formData.images.map((imgFile, idx) => (
+                        <div key={idx} style={{ position: 'relative' }}>
+                          <img
+                            src={URL.createObjectURL(imgFile)}
+                            alt="Preview"
+                            style={{ width: '70px', height: '70px', borderRadius: '8px', border: '1px solid var(--border)', display: 'block', objectFit: 'cover' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }))}
+                            style={{
+                              position: 'absolute', top: -6, right: -6,
+                              width: 20, height: 20, borderRadius: '50%',
+                              background: 'var(--error)', color: 'white',
+                              border: 'none', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                            }}
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Drop zone */}
+                  {(!formData.images || formData.images.length < 3) && (
+                    <>
+                      <div style={{
+                        border: '2px dashed var(--border)',
+                        borderRadius: 'var(--radius)',
+                        padding: '28px 16px', textAlign: 'center',
+                        background: 'var(--surface)',
+                        marginBottom: 10,
+                        cursor: 'pointer',
+                        transition: 'all 0.18s',
+                      }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-light)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--surface)'; }}
+                      >
+                        <div style={{ width: 36, height: 36, borderRadius: 9, background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
+                          <Upload size={18} color="var(--text-muted)" />
+                        </div>
+                        <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                          Drag & drop product images<br />
+                          <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>JPEG, PNG up to 10MB (Max 3)</span>
+                        </p>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          type="button"
+                          onClick={() => setIsCameraOpen(true)}
+                          style={{
+                            flex: 1, padding: '9px 10px', border: '1.5px solid var(--border)',
+                            borderRadius: 8, cursor: 'pointer', background: 'var(--surface)',
+                            fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            transition: 'all 0.15s', fontFamily: 'Inter, sans-serif',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-light)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--surface)'; }}
+                        >
+                          <Camera size={14} /> Camera
+                        </button>
+                        <label
+                          style={{
+                            flex: 1, padding: '9px 10px', border: '1.5px solid var(--border)',
+                            borderRadius: 8, cursor: 'pointer', background: 'var(--surface)',
+                            fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            transition: 'all 0.15s', userSelect: 'none',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-light)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--surface)'; }}
+                        >
+                          <Upload size={14} /> Upload
+                          <input type="file" accept="image/*" multiple style={{ display: 'none' }}
+                            onChange={e => {
+                              const files = Array.from(e.target.files);
+                              setFormData(prev => ({ ...prev, images: [...(prev.images || []), ...files].slice(0, 3) }));
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </>
+                  )}
+                </>
               )}
             </div>
 

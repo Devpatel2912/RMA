@@ -334,27 +334,46 @@ export default function TicketDetailsModal({
                 </div>
 
                 {/* Inward Image — shown prominently */}
-                {service.inwardImageURL && (
-                  <div style={{ marginBottom: '20px' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '10px' }}>
-                      Inward Image
+                {(() => {
+                  let images = [];
+                  if (service.inwardImageURL) {
+                    try {
+                      images = JSON.parse(service.inwardImageURL);
+                      if (!Array.isArray(images)) images = [service.inwardImageURL];
+                    } catch (e) {
+                      images = [service.inwardImageURL];
+                    }
+                  }
+                  
+                  if (images.length === 0) return null;
+
+                  return (
+                    <div style={{ marginBottom: '20px' }}>
+                      <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '10px' }}>
+                        Inward Image{images.length > 1 ? 's' : ''}
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px' }}>
+                        {images.map((imgUrl, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => setPreviewImage(imgUrl)}
+                            style={{ flexShrink: 0, cursor: 'zoom-in', display: 'inline-block', borderRadius: '10px', overflow: 'hidden', border: '2px solid #e2e8f0', boxShadow: 'none', transition: 'box-shadow 0.2s' }}
+                            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(16,185,129,0.25)'}
+                            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'}
+                            title="Click to view full size"
+                          >
+                            <img
+                              src={imgUrl}
+                              alt={`Inward ${idx + 1}`}
+                              style={{ maxHeight: '160px', maxWidth: '100%', display: 'block', objectFit: 'contain' }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>Click image to view full size</div>
                     </div>
-                    <div
-                      onClick={() => setPreviewImage(service.inwardImageURL)}
-                      style={{ cursor: 'zoom-in', display: 'inline-block', borderRadius: '10px', overflow: 'hidden', border: '2px solid #e2e8f0', boxShadow: 'none', transition: 'box-shadow 0.2s' }}
-                      onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(16,185,129,0.25)'}
-                      onMouseLeave={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'}
-                      title="Click to view full size"
-                    >
-                      <img
-                        src={service.inwardImageURL}
-                        alt="Inward"
-                        style={{ maxHeight: '220px', maxWidth: '100%', display: 'block', objectFit: 'contain' }}
-                      />
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>Click image to view full size</div>
-                  </div>
-                )}
+                  );
+                })()}
                 
                 <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

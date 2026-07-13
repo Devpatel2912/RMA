@@ -464,13 +464,27 @@ export const generateTicketPDF = (stageName, ticket) => {
       }
     };
 
+    const addInwardImages = (title) => {
+      if (!ticket.inwardImageURL) return;
+      try {
+        const parsed = JSON.parse(ticket.inwardImageURL);
+        if (Array.isArray(parsed)) {
+          parsed.slice(0, 3).forEach((img, i) => addImageToDoc(`${title} ${i + 1}`, img));
+        } else {
+          addImageToDoc(title, ticket.inwardImageURL);
+        }
+      } catch(e) {
+        addImageToDoc(title, ticket.inwardImageURL);
+      }
+    };
+
     if (stage === 'VENDOR OUTWARD') {
-      if (ticket.inwardImageURL) addImageToDoc('Product Image', ticket.inwardImageURL);
+      addInwardImages('Product Image');
       if (ticket.outwardImageURL) addImageToDoc('Docket Image', ticket.outwardImageURL);
     } else if (stage === 'VENDOR INWARD') {
       addVendorInwardImages();
     } else {
-      if (ticket.inwardImageURL) addImageToDoc('Inward Condition', ticket.inwardImageURL);
+      addInwardImages('Inward Condition');
       addVendorInwardImages();
       if (ticket.outwardImageURL) addImageToDoc('Final Outward Condition', ticket.outwardImageURL);
     }

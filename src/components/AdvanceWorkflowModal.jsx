@@ -104,12 +104,37 @@ export default function AdvanceWorkflowModal({
                 </div>
               </div>
 
-              {advancingItem.inwardImageURL && (
-                <div style={{ marginBottom: '16px' }}>
-                  <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Inward Image</span>
-                  <img src={advancingItem.inwardImageURL} alt="Inward" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
-                </div>
-              )}
+              {(() => {
+                let images = [];
+                if (advancingItem.inwardImageURL) {
+                  try {
+                    images = JSON.parse(advancingItem.inwardImageURL);
+                    if (!Array.isArray(images)) images = [advancingItem.inwardImageURL];
+                  } catch (e) {
+                    images = [advancingItem.inwardImageURL];
+                  }
+                }
+                
+                if (images.length === 0) return null;
+
+                return (
+                  <div style={{ marginBottom: '16px' }}>
+                    <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>
+                      Inward Image{images.length > 1 ? 's' : ''}
+                    </span>
+                    <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px' }}>
+                      {images.map((imgUrl, idx) => (
+                        <img 
+                          key={idx}
+                          src={imgUrl} 
+                          alt={`Inward ${idx + 1}`} 
+                          style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px', border: '1px solid #e2e8f0', objectFit: 'contain' }} 
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="form-group" style={{ marginBottom: '16px' }}>
                 <label className="form-label" style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Docket Number</label>
@@ -327,10 +352,6 @@ export default function AdvanceWorkflowModal({
                 <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
                   <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Courier Charge</label>
                   <input type="text" className="form-input" style={{ padding: '8px', fontSize: '14px', width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px' }} placeholder="e.g. ₹150" value={courierCharge} onChange={(e) => setCourierCharge(e.target.value)} />
-                </div>
-                <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Message to Customer (Optional)</label>
-                  <textarea className="form-textarea" style={{ padding: '8px', fontSize: '14px', width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px' }} placeholder="Type a message to send along with the PDF via WhatsApp..." value={customMessage} onChange={(e) => setCustomMessage(e.target.value)} rows="3"></textarea>
                 </div>
               </div>
               <button

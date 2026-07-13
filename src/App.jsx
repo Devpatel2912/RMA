@@ -28,6 +28,9 @@ import './workflow.css';
 import './advance-modal.css';
 import './ledgers.css';
 import { generateTicketPDF } from './utils/pdfGenerator';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import LandingPage from './landing/LandingPage';
+import LoginPage from './landing/LoginPage';
 import './login.css';
 import './mobile.css';
 
@@ -55,9 +58,7 @@ function App() {
   const { data: vendors = [] } = useVendors();
 
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
-  const [showPassword, setShowPassword] = useState(false);
-  const [loginError, setLoginError] = useState('');
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -104,7 +105,7 @@ function App() {
     serviceVendor: '',
     serialNumber: '',
     description: '',
-    image: null,
+    images: [],
     inwardDate: getTodayDate(),
     rma: null
   });
@@ -178,8 +179,8 @@ function App() {
   };
 
   const handleSaveInward = () => {
-    if (!formData.customerName || !formData.contactNumber || !formData.productName || !formData.category || !formData.serviceVendor || !formData.description || !formData.inwardDate || !formData.image) {
-      alert("Please fill out all required fields. Serial Number and Email are optional.");
+    if (!formData.customerName || !formData.contactNumber || !formData.productName || !formData.category || !formData.serviceVendor || !formData.description || !formData.inwardDate || !formData.images || formData.images.length === 0) {
+      alert("Please fill out all required fields and add at least one image. Serial Number and Email are optional.");
       return;
     }
 
@@ -228,7 +229,7 @@ function App() {
         serviceVendor: 'ASUS Service',
         serialNumber: '',
         description: '',
-        image: null,
+        images: [],
         inwardDate: getTodayDate(),
         rma: null
       });
@@ -262,12 +263,20 @@ function App() {
     };
 
     setIsSaving(true);
-    if (formData.image) {
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        finalizeSave(event.target.result);
-      };
-      reader.readAsDataURL(formData.image);
+    if (formData.images && formData.images.length > 0) {
+      const uploadedImages = [];
+      let loadedCount = 0;
+      formData.images.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          uploadedImages.push(event.target.result);
+          loadedCount += 1;
+          if (loadedCount === formData.images.length) {
+            finalizeSave(JSON.stringify(uploadedImages));
+          }
+        };
+        reader.readAsDataURL(file);
+      });
     } else {
       finalizeSave(null);
     }
@@ -364,42 +373,6 @@ function App() {
       .catch(err => {
         console.error("Failed to update status:", err);
       });
-
-    // Generate PDF and send WhatsApp ONLY if transitioning FROM CUSTOMER INWARD
-    if (advancingItem.status === 'CUSTOMER INWARD') {
-      const itemToSend = updatedItem || advancingItem;
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
-
-      // 1. Send PDF to Vendor Only
-      const vendorObj = vendors.find(v => v.companyName === advancingItem.serviceVendor);
-      if (vendorObj && vendorObj.phoneNumber) {
-        axios.post(`${baseUrl}/whatsapp/send-pdf`, { ticketData: itemToSend, message: customMessage, targetPhone: vendorObj.phoneNumber })
-          .then(res => console.log("WhatsApp PDF Sent to Vendor:", res.data))
-          .catch(err => {
-            console.error("Failed to send WhatsApp PDF to Vendor:", err);
-            alert("Vendor WhatsApp failed: " + (err.response?.data?.error || err.message));
-          });
-      } else {
-        console.warn("Vendor phone number not found for PDF dispatch:", advancingItem.serviceVendor);
-      }
-
-      // The WhatsApp PDF is generated and sent by the backend.
-      // We no longer auto-download the PDF on the frontend here.
-    } else if (advancingItem.status === 'VENDOR INWARD') {
-      // Transitioning to CUSTOMER OUTWARD -> Send Text to Customer Only
-      const itemToSend = updatedItem || advancingItem;
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
-
-      const staticMsg = customMessage || `Hello ${itemToSend.name}, your RMA ticket (${itemToSend.rma}) is ready for dispatch from our vendor.`;
-
-      // Send Text to Customer
-      axios.post(`${baseUrl}/whatsapp/send-text`, { vendorPhone: itemToSend.contactNumber, text: staticMsg })
-        .then(res => console.log("WhatsApp Text Sent to Customer:", res.data))
-        .catch(err => {
-          console.error("Failed to send WhatsApp Text to Customer:", err);
-          alert("Customer WhatsApp failed: " + (err.response?.data?.error || err.message));
-        });
-    }
 
     setAdvancingItem(null);
     setShippingImagePreview(null);
@@ -510,105 +483,19 @@ function App() {
     setIsMobileMenuOpen(false); // Close drawer on navigation
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoginError('');
-    setIsLoggingIn(true);
-    const email = e.target.email.value.trim();
-    const password = e.target.password.value;
-    try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
-      const res = await axios.post(`${baseUrl}/auth/login`, { email, password });
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('userRole', res.data.user.role);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-      setUserRole(res.data.user.role);
-      setIsLoggedIn(true);
-    } catch (err) {
-      if (err.response && err.response.data && err.response.data.error) {
-        setLoginError(err.response.data.error);
-      } else {
-        setLoginError("Login failed. Please check your credentials.");
-      }
-      console.error(err);
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
+  const renderDashboard = () => {
+    const navItems = [
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'workflow', label: 'Workflow', icon: Workflow },
+      { id: 'categories', label: 'Categories', icon: Package },
+      { id: 'vendors', label: 'Vendors', icon: Building2 },
+      { id: 'print', label: 'Reports', icon: Printer },
+      ...(userRole === 'ADMIN' ? [{ id: 'whatsapp', label: 'WhatsApp Setup', icon: Smartphone }] : []),
+      { id: 'courier-charges', label: 'Courier Charges', icon: Truck },
+    ];
 
-  // ── Login Page ─────────────────────────────────────────
-  if (!isLoggedIn) {
     return (
-      <div className="login-container">
-        <div className="login-background-pattern"></div>
-        <div className="login-box">
-          <div className="login-header">
-            <div className="login-logo">R</div>
-            <div className="login-title-group">
-              <h1 className="login-title">Welcome Back</h1>
-              <p className="login-subtitle">Sign in to your RMA Flow account</p>
-            </div>
-          </div>
-
-          <form className="login-form" onSubmit={handleLogin}>
-            {loginError && (
-              <div className="login-error">
-                {loginError}
-              </div>
-            )}
-            <div className="login-input-group">
-              <label>Email Address</label>
-              <input type="email" name="email" className="login-input" placeholder="admin@example.com" required />
-            </div>
-
-            <div className="login-input-group">
-              <label>Password</label>
-              <div style={{ position: 'relative' }}>
-                <input 
-                  type={showPassword ? "text" : "password"} 
-                  name="password"
-                  className="login-input" 
-                  placeholder="••••••••" 
-                  required 
-                  style={{ paddingRight: '44px' }}
-                />
-                <button 
-                  type="button" 
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
-                >
-                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                </button>
-              </div>
-            </div>
-
-            <button type="submit" className="login-btn" disabled={isLoggingIn} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
-              {isLoggingIn ? <Spinner size="sm" variant="white" /> : 'Sign In'}
-            </button>
-          </form>
-
-          {/* Footer note */}
-          <p style={{ textAlign: 'center', fontSize: '12px', color: '#334155', marginTop: '-8px' }}>
-            RMA Flow · Powered by Avxperts
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Main Layout ────────────────────────────────────────
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'workflow', label: 'Workflow', icon: Workflow },
-    { id: 'categories', label: 'Categories', icon: Package },
-    { id: 'vendors', label: 'Vendors', icon: Building2 },
-    { id: 'print', label: 'Reports', icon: Printer },
-    ...(userRole === 'ADMIN' ? [{ id: 'whatsapp', label: 'WhatsApp Setup', icon: Smartphone }] : []),
-    { id: 'courier-charges', label: 'Courier Charges', icon: Truck },
-  ];
-
-  return (
-    <div className="layout">
+      <div className="layout">
 
       {/* Mobile Header */}
       <div className="mobile-header">
@@ -659,7 +546,7 @@ function App() {
             serviceVendor: '',
             serialNumber: '',
             description: '',
-            image: null,
+            images: [],
             inwardDate: getTodayDate(),
             rma: null
           });
@@ -802,6 +689,20 @@ function App() {
         confirmAdvanceStatus={confirmAdvanceStatus}
       />
     </div>
+    );
+  };
+
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/landing/login-admin" element={
+        isLoggedIn ? <Navigate to="/admin-panel" /> : <LoginPage setIsLoggedIn={setIsLoggedIn} setUserRole={setUserRole} />
+      } />
+      <Route path="/admin-panel" element={
+        isLoggedIn ? renderDashboard() : <Navigate to="/landing/login-admin" />
+      } />
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
   );
 }
 
