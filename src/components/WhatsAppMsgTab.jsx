@@ -87,17 +87,20 @@ const WhatsAppMsgTab = () => {
       return;
     }
 
-    const newFormat = {
+    const formatToAdd = {
       name: normalizedName,
       message: normalizedMessage,
     };
-
-    setFormats((current) => [...current, newFormat]);
-    setFormData((current) => ({
-      ...current,
+    const nextFormats = [...formats, formatToAdd];
+    const nextFormData = {
+      ...formData,
       format: normalizedName,
-      message: newFormat.message,
-    }));
+      message: formatToAdd.message,
+    };
+
+    setFormats(nextFormats);
+    setFormData(nextFormData);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ formats: nextFormats, formData: nextFormData }));
     closeAddFormat();
   };
 
@@ -197,61 +200,6 @@ const WhatsAppMsgTab = () => {
               </button>
             </div>
 
-            {isAddingFormat && (
-              <div
-                style={{
-                  border: '1.5px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  background: 'var(--surface-hover)',
-                  padding: 16,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 14,
-                }}
-              >
-                <div className="form-group">
-                  <label className="form-label">Format Name</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="e.g. Repair Update"
-                    value={newFormat.name}
-                    onChange={(event) => setNewFormat((current) => ({ ...current, name: event.target.value }))}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Message</label>
-                  <textarea
-                    className="form-textarea"
-                    placeholder="Enter format message..."
-                    value={newFormat.message}
-                    onChange={(event) => setNewFormat((current) => ({ ...current, message: event.target.value }))}
-                    style={{ minHeight: 120 }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    className="btn-cancel"
-                    onClick={closeAddFormat}
-                    style={{ flex: '0 0 auto', minWidth: 110 }}
-                  >
-                    Close
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-save"
-                    onClick={handleSaveNewFormat}
-                    style={{ flex: '0 0 auto', minWidth: 110 }}
-                  >
-                    <Save size={16} /> Save
-                  </button>
-                </div>
-              </div>
-            )}
-
             <div className="form-group">
               <label className="form-label">Mobile Number</label>
               <input
@@ -295,6 +243,70 @@ const WhatsAppMsgTab = () => {
           </div>
         </form>
       </div>
+
+      {isAddingFormat && (
+        <div className="modal-overlay" onClick={closeAddFormat}>
+          <div
+            className="modal-content"
+            onClick={(event) => event.stopPropagation()}
+            style={{ maxWidth: 720 }}
+          >
+            <div className="modal-header">
+              <div className="modal-title-group">
+                <span className="modal-title">Add WhatsApp Format</span>
+                <span className="modal-subtitle">Create a reusable message format for the dropdown</span>
+              </div>
+              <button type="button" className="modal-close-btn" onClick={closeAddFormat} aria-label="Close">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Format Name</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. Repair Update"
+                  value={newFormat.name}
+                  onChange={(event) => setNewFormat((current) => ({ ...current, name: event.target.value }))}
+                  autoFocus
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Message</label>
+                <textarea
+                  className="form-textarea"
+                  placeholder="Enter format message..."
+                  value={newFormat.message}
+                  onChange={(event) => setNewFormat((current) => ({ ...current, message: event.target.value }))}
+                  style={{ minHeight: 150 }}
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer" style={{ justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn-cancel"
+                onClick={closeAddFormat}
+                style={{ flex: '0 0 auto', minWidth: 110 }}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                className="btn-save"
+                onClick={handleSaveNewFormat}
+                style={{ flex: '0 0 auto', minWidth: 110 }}
+              >
+                <Save size={16} /> Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
