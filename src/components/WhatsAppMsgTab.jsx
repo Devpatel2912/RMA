@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { MessageSquare, Plus, Save, X } from 'lucide-react';
+import axios from 'axios';
 
-const STORAGE_KEY = 'rma-whatsapp-message-config';
+const LOCAL_FORMATS_KEY = 'rma-local-whatsapp-formats';
 
 const stageOptions = [
   'Customer Inward',
@@ -11,51 +12,92 @@ const stageOptions = [
   'Completed',
 ];
 
-const initialFormats = [
-  {
-    name: 'Default',
-    message: 'Dear customer, your RMA update is ready. Please contact us for more details.',
-  },
-  {
-    name: 'RMA Customer Status',
-    message: 'Dear customer, your RMA request status has been updated.',
-  },
-];
-
 const emptyForm = {
   stage: '',
-  format: 'Default',
-  mobileNumber: '',
-  message: initialFormats[0].message,
+  format: '',
+  message: '',
 };
 
-const getSavedConfig = () => {
+const getLocalFormats = () => {
   try {
-    const savedConfig = localStorage.getItem(STORAGE_KEY);
-    return savedConfig ? JSON.parse(savedConfig) : null;
+    const savedFormats = localStorage.getItem(LOCAL_FORMATS_KEY);
+    return savedFormats ? JSON.parse(savedFormats) : [];
   } catch {
-    return null;
+    return [];
   }
 };
 
+const saveLocalFormats = (formats) => {
+  localStorage.setItem(LOCAL_FORMATS_KEY, JSON.stringify(formats));
+};
+
 const WhatsAppMsgTab = () => {
-  const savedConfig = useMemo(() => getSavedConfig(), []);
-  const [formats, setFormats] = useState(savedConfig?.formats || initialFormats);
-  const [formData, setFormData] = useState(savedConfig?.formData || emptyForm);
+  const [formats, setFormats] = useState([]);
+  const [formData, setFormData] = useState(emptyForm);
   const [isAddingFormat, setIsAddingFormat] = useState(false);
   const [newFormat, setNewFormat] = useState({ name: '', message: '' });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFormats = async () => {
+      try {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+        const response = await axios.get(`${baseUrl}/whatsapp-formats`);
+        const localFormats = getLocalFormats();
+        const serverFormats = response.data || [];
+        const mergedFormats = [
+          ...serverFormats,
+          ...localFormats.filter(
+            (localFormat) =>
+              !serverFormats.some(
+                (serverFormat) =>
+                  serverFormat.stage === localFormat.stage &&
+                  serverFormat.name.toLowerCase() === localFormat.name.toLowerCase()
+              )
+          ),
+        ];
+        setFormats(mergedFormats);
+      } catch (err) {
+        console.error("Failed to fetch formats:", err);
+        setFormats(getLocalFormats());
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchFormats();
+  }, []);
 
   const selectedFormat = useMemo(
-    () => formats.find((format) => format.name === formData.format),
-    [formats, formData.format]
+    () => formats.find((format) => format.name === formData.format && format.stage === formData.stage),
+    [formats, formData.format, formData.stage]
   );
+
+  const availableFormatsForStage = useMemo(
+    () => formats.filter((format) => format.stage === formData.stage),
+    [formats, formData.stage]
+  );
+  const hasSelectedStage = Boolean(formData.stage);
+  const hasFormatsForSelectedStage = availableFormatsForStage.length > 0;
 
   const updateField = (field, value) => {
     setFormData((current) => ({ ...current, [field]: value }));
   };
 
+  const handleStageChange = (newStage) => {
+    const available = formats.filter(f => f.stage === newStage);
+    const newFormatName = available.length > 0 ? available[0].name : '';
+    const newMessage = available.length > 0 ? available[0].message : '';
+    
+    setFormData((current) => ({
+      ...current,
+      stage: newStage,
+      format: newFormatName,
+      message: newMessage,
+    }));
+  };
+
   const handleFormatChange = (formatName) => {
-    const nextFormat = formats.find((format) => format.name === formatName);
+    const nextFormat = formats.find((format) => format.name === formatName && format.stage === formData.stage);
     setFormData((current) => ({
       ...current,
       format: formatName,
@@ -64,6 +106,10 @@ const WhatsAppMsgTab = () => {
   };
 
   const openAddFormat = () => {
+    if (!formData.stage) {
+      alert("Please select a stage first to add a format to it.");
+      return;
+    }
     setNewFormat({ name: '', message: formData.message || '' });
     setIsAddingFormat(true);
   };
@@ -73,7 +119,41 @@ const WhatsAppMsgTab = () => {
     setNewFormat({ name: '', message: '' });
   };
 
-  const handleSaveNewFormat = () => {
+  const handleDeleteFormat = async () => {
+    if (!formData.format || !formData.stage) return;
+    
+    const formatToDelete = formats.find(f => f.name === formData.format && f.stage === formData.stage);
+    if (!formatToDelete || !formatToDelete.id) return;
+    
+    if (!window.confirm(`Are you sure you want to delete the format "${formData.format}"?`)) return;
+
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+      if (String(formatToDelete.id).startsWith('local-')) {
+        saveLocalFormats(getLocalFormats().filter((format) => format.id !== formatToDelete.id));
+      } else {
+        await axios.delete(`${baseUrl}/whatsapp-formats/${formatToDelete.id}`);
+      }
+      
+      const nextFormats = formats.filter(f => f.id !== formatToDelete.id);
+      const availableAfterDelete = nextFormats.filter(f => f.stage === formData.stage);
+      
+      const newFormatName = availableAfterDelete.length > 0 ? availableAfterDelete[0].name : '';
+      const newMessage = availableAfterDelete.length > 0 ? availableAfterDelete[0].message : '';
+
+      setFormats(nextFormats);
+      setFormData({
+        ...formData,
+        format: newFormatName,
+        message: newMessage
+      });
+    } catch (err) {
+      console.error("Failed to delete format:", err);
+      alert("Failed to delete format.");
+    }
+  };
+
+  const handleSaveNewFormat = async () => {
     const normalizedName = newFormat.name.trim();
     const normalizedMessage = newFormat.message.trim();
 
@@ -82,26 +162,49 @@ const WhatsAppMsgTab = () => {
       return;
     }
 
-    if (formats.some((format) => format.name.toLowerCase() === normalizedName.toLowerCase())) {
-      alert('This format already exists.');
+    if (formats.some((format) => format.name.toLowerCase() === normalizedName.toLowerCase() && format.stage === formData.stage)) {
+      alert('This format already exists for this stage.');
       return;
     }
 
-    const formatToAdd = {
-      name: normalizedName,
-      message: normalizedMessage,
-    };
-    const nextFormats = [...formats, formatToAdd];
-    const nextFormData = {
-      ...formData,
-      format: normalizedName,
-      message: formatToAdd.message,
-    };
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+      const response = await axios.post(`${baseUrl}/whatsapp-formats`, {
+        stage: formData.stage,
+        name: normalizedName,
+        message: normalizedMessage
+      });
+      
+      const savedFormat = response.data;
+      const nextFormats = [...formats, savedFormat];
+      
+      setFormats(nextFormats);
+      setFormData({
+        ...formData,
+        format: savedFormat.name,
+        message: savedFormat.message,
+      });
+      closeAddFormat();
+    } catch (err) {
+      console.error("Failed to save format:", err);
+      const localFormat = {
+        id: `local-${Date.now()}`,
+        stage: formData.stage,
+        name: normalizedName,
+        message: normalizedMessage,
+      };
+      const nextFormats = [...formats, localFormat];
+      const nextLocalFormats = [...getLocalFormats(), localFormat];
 
-    setFormats(nextFormats);
-    setFormData(nextFormData);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ formats: nextFormats, formData: nextFormData }));
-    closeAddFormat();
+      setFormats(nextFormats);
+      saveLocalFormats(nextLocalFormats);
+      setFormData({
+        ...formData,
+        format: localFormat.name,
+        message: localFormat.message,
+      });
+      closeAddFormat();
+    }
   };
 
   const handleCancel = () => {
@@ -110,25 +213,12 @@ const WhatsAppMsgTab = () => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-
-    if (!formData.stage || !formData.mobileNumber.trim() || !formData.message.trim()) {
-      alert('Please select stage, enter mobile number, and add message.');
-      return;
-    }
-
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        formats,
-        formData: {
-          ...formData,
-          mobileNumber: formData.mobileNumber.trim(),
-          message: formData.message.trim(),
-        },
-      })
-    );
-    alert('WhatsApp message format saved.');
+    alert('WhatsApp message format saved (Note: Formatting is saved automatically when adding).');
   };
+
+  if (isLoading) {
+    return <div style={{ padding: 24 }}>Loading formats...</div>;
+  }
 
   return (
     <div className="tab-pane active">
@@ -151,7 +241,7 @@ const WhatsAppMsgTab = () => {
                 <select
                   className="form-select"
                   value={formData.stage}
-                  onChange={(event) => updateField('stage', event.target.value)}
+                  onChange={(event) => handleStageChange(event.target.value)}
                 >
                   <option value="">Select stage</option>
                   {stageOptions.map((stage) => (
@@ -168,59 +258,89 @@ const WhatsAppMsgTab = () => {
                   className="form-select"
                   value={formData.format}
                   onChange={(event) => handleFormatChange(event.target.value)}
+                  disabled={!hasSelectedStage || !hasFormatsForSelectedStage}
                 >
-                  {formats.map((format) => (
-                    <option key={format.name} value={format.name}>
-                      {format.name}
-                    </option>
-                  ))}
+                  {!hasSelectedStage ? (
+                    <option value="">Select stage first</option>
+                  ) : !hasFormatsForSelectedStage ? (
+                    <option value="">No format added in this stage</option>
+                  ) : (
+                    availableFormatsForStage.map((format) => (
+                      <option key={format.name} value={format.name}>
+                        {format.name}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
-              <button
-                type="button"
-                onClick={openAddFormat}
-                title="Add format"
-                aria-label="Add format"
-                style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1.5px solid var(--border)',
-                  background: 'var(--surface)',
-                  color: 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                }}
-              >
-                <Plus size={18} />
-              </button>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Mobile Number</label>
-              <input
-                type="tel"
-                className="form-input"
-                placeholder="e.g. 919876543210"
-                value={formData.mobileNumber}
-                onChange={(event) => updateField('mobileNumber', event.target.value)}
-              />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={openAddFormat}
+                  title="Add format"
+                  aria-label="Add format"
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1.5px solid var(--border)',
+                    background: 'var(--surface)',
+                    color: 'var(--primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Plus size={18} />
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={handleDeleteFormat}
+                  title="Delete format"
+                  aria-label="Delete format"
+                  disabled={!formData.format}
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1.5px solid var(--border)',
+                    background: formData.format ? '#fee2e2' : 'var(--surface)',
+                    color: formData.format ? '#ef4444' : '#cbd5e1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: formData.format ? 'pointer' : 'not-allowed',
+                    flexShrink: 0,
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
             <div className="form-group">
               <label className="form-label">Message</label>
               <textarea
                 className="form-textarea"
-                placeholder="Enter WhatsApp message..."
+                placeholder={
+                  hasSelectedStage && !hasFormatsForSelectedStage
+                    ? 'Currently no message format in this stage. Click + to add format.'
+                    : 'Enter WhatsApp message...'
+                }
                 value={formData.message}
                 onChange={(event) => updateField('message', event.target.value)}
+                disabled={hasSelectedStage && !hasFormatsForSelectedStage}
                 style={{ minHeight: 150 }}
               />
-              {selectedFormat && (
+              {hasSelectedStage && !hasFormatsForSelectedStage ? (
+                <p style={{ margin: 0, color: 'var(--warning)', fontSize: 12, fontWeight: 600 }}>
+                  Currently no message format in this stage. Click + to add format.
+                </p>
+              ) : selectedFormat && (
                 <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 12 }}>
                   Selected format: {selectedFormat.name}
                 </p>
