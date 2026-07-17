@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Search, ArrowRightCircle, Share, Eye, Printer, Loader2, SlidersHorizontal } from 'lucide-react';
+import { Search, ArrowRightCircle, Share, Eye, Printer, Loader2, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import { useTickets } from '../api/hooks';
 import { SkeletonLoader } from './Spinner';
 
@@ -14,6 +16,10 @@ export default function WorkflowTab({
   const [filterMonth, setFilterMonth] = useState('All');
   const [filterYear, setFilterYear] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
+  const [isAdvancingId, setIsAdvancingId] = useState(null);
+  const [selectedTickets, setSelectedTickets] = useState([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const queryClient = useQueryClient();
   const itemsPerPage = 10;
 
   const filteredWorkflowItems = recentActivities.filter(item => {
@@ -77,6 +83,39 @@ export default function WorkflowTab({
   const totalPages = Math.max(1, Math.ceil(groupedWorkflowItems.length / itemsPerPage));
   const paginatedGroups = groupedWorkflowItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedTickets(paginatedGroups.map(g => g.mainItem.id));
+    } else {
+      setSelectedTickets([]);
+    }
+  };
+
+  const handleSelectTicket = (id) => {
+    setSelectedTickets(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!window.confirm(`Are you sure you want to delete ${selectedTickets.length} ticket(s)?`)) return;
+    setIsDeleting(true);
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+      const results = await Promise.allSettled(selectedTickets.map(id => axios.delete(`${baseUrl}/tickets/${id}`)));
+      
+      const failed = results.filter(r => r.status === 'rejected');
+      if (failed.length > 0) {
+        console.error('Some tickets failed to delete:', failed);
+        alert(`Finished deletion process. ${failed.length} out of ${results.length} ticket(s) could not be deleted.`);
+      }
+    } catch (error) {
+      console.error('Unexpected error during deletion:', error);
+    } finally {
+      setSelectedTickets([]);
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoading) {
     return <SkeletonLoader rows={7} />;
   }
@@ -98,6 +137,21 @@ export default function WorkflowTab({
         </div>
 
         <div className="workflow-controls">
+          {selectedTickets.length > 0 && (
+            <button
+              onClick={handleDeleteSelected}
+              disabled={isDeleting}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                background: '#ef4444', color: 'white', padding: '8px 16px',
+                borderRadius: '6px', border: 'none', cursor: isDeleting ? 'not-allowed' : 'pointer',
+                fontWeight: 500, fontSize: '14px', marginRight: '8px'
+              }}
+            >
+              {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              Delete Selected
+            </button>
+          )}
           <select
             className="filter-dropdown"
             value={filterMonth}
@@ -159,6 +213,14 @@ export default function WorkflowTab({
           <table className="workflow-table">
           <thead>
             <tr>
+              <th className="workflow-th" style={{ width: '40px', textAlign: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedTickets.length > 0 && selectedTickets.length === paginatedGroups.length}
+                  onChange={handleSelectAll}
+                  style={{ cursor: 'pointer' }}
+                />
+              </th>
               <th className="workflow-th">Ticket #</th>
               <th className="workflow-th">Customer</th>
               <th className="workflow-th">Product</th>
@@ -170,7 +232,7 @@ export default function WorkflowTab({
           <tbody>
             {paginatedGroups.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
                   <Search size={28} style={{ marginBottom: 12, opacity: 0.3, display: 'block', margin: '0 auto 12px' }} />
                   <div style={{ fontSize: 14 }}>No tickets match the current filters.</div>
                 </td>
@@ -186,6 +248,15 @@ export default function WorkflowTab({
                     style={{ cursor: 'pointer' }}
                     onClick={() => setViewingItem(mainItem)}
                   >
+                    <td className="workflow-td" style={{ textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedTickets.includes(mainItem.id)}
+                        onChange={() => handleSelectTicket(mainItem.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </td>
                     <td className="workflow-td">
                       <span className="ticket-id">{mainItem.rma}</span>
                     </td>
@@ -227,17 +298,23 @@ export default function WorkflowTab({
                           mainItem.status !== 'CUSTOMER OUTWARD' && mainItem.status !== 'COMPLETED' ? (
                             <button
                               className="action-btn"
-                              onClick={(e) => {
+                              disabled={isAdvancingId === mainItem.id}
+                              onClick={async (e) => {
                                 e.stopPropagation();
-                                setAdvancingItem(mainItem);
-                                setAdvanceDate(getTodayDate());
-                                setNewSerialNumber('');
-                                if (setDocketNumber) setDocketNumber('');
-                                setCourierCharge('');
+                                setIsAdvancingId(mainItem.id);
+                                try {
+                                  await setAdvancingItem(mainItem);
+                                  setAdvanceDate(getTodayDate());
+                                  setNewSerialNumber('');
+                                  if (setDocketNumber) setDocketNumber('');
+                                  setCourierCharge('');
+                                } finally {
+                                  setIsAdvancingId(null);
+                                }
                               }}
                               title="Advance to next stage"
                             >
-                              <ArrowRightCircle size={17} />
+                              {isAdvancingId === mainItem.id ? <Loader2 size={17} className="animate-spin" /> : <ArrowRightCircle size={17} />}
                             </button>
                           ) : (
                             <button

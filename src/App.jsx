@@ -17,7 +17,8 @@ import {
   Truck,
   Moon,
   Sun,
-  X
+  X,
+  MessageSquare
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTickets, useVendors } from './api/hooks';
@@ -45,6 +46,7 @@ import TicketDetailsModal from './components/TicketDetailsModal';
 import PrintReportsTab from './components/PrintReportsTab';
 import WhatsAppSettings from './components/WhatsAppSettings';
 import CourierChargesTab from './components/CourierChargesTab';
+import WhatsAppMsgTab from './components/WhatsAppMsgTab';
 
 // Initialize Axios default token if available in localStorage
 const initialToken = localStorage.getItem('token');
@@ -196,70 +198,73 @@ function App() {
       dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
     }
 
-    const finalizeSave = (imgData = null) => {
-      const optimisticTicket = {
-        id: newId,
-        name: formData.customerName,
-        contactNumber: formData.contactNumber || 'N/A',
-        product: formData.productName,
-        category: formData.category,
-        serviceVendor: formData.serviceVendor,
-        serialNumber: formData.serialNumber || 'N/A',
-        email: formData.email,
-        rma: newRma,
-        status: "CUSTOMER INWARD",
-        date: dateStr,
-        statusClass: "bg-blue-light",
-        inwardImageURL: imgData
-      };
-
-      // Optimistically add ticket to the top of the list instantly
-      const previousTickets = queryClient.getQueryData(['tickets']);
-      queryClient.setQueryData(['tickets'], (old = []) => [optimisticTicket, ...old]);
-
-      // Close modal and reset form immediately for snappy UX
-      setIsModalOpen(false);
-      setFormData({
-        customerName: '',
-        customerAddress: '',
-        contactNumber: '',
-        email: '',
-        productName: '',
-        category: 'Motherboard',
-        serviceVendor: 'ASUS Service',
-        serialNumber: '',
-        description: '',
-        images: [],
-        inwardDate: getTodayDate(),
-        rma: null
-      });
-
-      setIsSaving(false);
-
+    const finalizeSave = async (imgData = null) => {
+      setIsSaving(true);
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
-      axios.post(`${baseUrl}/tickets`, {
-        rma: newRma,
-        customerName: formData.customerName,
-        customerAddress: formData.customerAddress,
-        contactNumber: formData.contactNumber,
-        email: formData.email,
-        product: formData.productName,
-        serialNumber: formData.serialNumber,
-        status: "CUSTOMER INWARD",
-        date: dateStr,
-        description: formData.description,
-        category: formData.category,
-        serviceVendor: formData.serviceVendor,
-        inwardImageURL: imgData
-      }).then(() => {
-        // Refresh from server to get real ID and server-side data
+      
+      try {
+        const res = await axios.post(`${baseUrl}/tickets`, {
+          rma: newRma,
+          customerName: formData.customerName,
+          customerAddress: formData.customerAddress,
+          contactNumber: formData.contactNumber,
+          email: formData.email,
+          product: formData.productName,
+          serialNumber: formData.serialNumber,
+          status: "CUSTOMER INWARD",
+          date: dateStr,
+          description: formData.description,
+          category: formData.category,
+          serviceVendor: formData.serviceVendor,
+          inwardImageURL: imgData
+        });
+        
+        const serverTicket = res.data;
+        const newTicket = {
+          id: serverTicket.id.toString(),
+          rma: serverTicket.rma,
+          name: serverTicket.customerName,
+          customerAddress: serverTicket.customerAddress,
+          contactNumber: serverTicket.contactNumber,
+          email: serverTicket.email,
+          product: serverTicket.product,
+          serialNumber: serverTicket.serialNumber,
+          status: serverTicket.status,
+          date: serverTicket.date,
+          description: serverTicket.description,
+          category: formData.category,
+          serviceVendor: formData.serviceVendor,
+          inwardImageURL: serverTicket.inwardImageURL,
+          statusClass: "bg-blue-light"
+        };
+
+        // Instantly update UI with the real ticket ID
+        queryClient.setQueryData(['tickets'], (old = []) => [newTicket, ...old]);
+        
+        // Also invalidate just in case
         queryClient.invalidateQueries({ queryKey: ['tickets'] });
-      }).catch(err => {
+
+        setIsModalOpen(false);
+        setFormData({
+          customerName: '',
+          customerAddress: '',
+          contactNumber: '',
+          email: '',
+          productName: '',
+          category: 'Motherboard',
+          serviceVendor: 'ASUS Service',
+          serialNumber: '',
+          description: '',
+          images: [],
+          inwardDate: getTodayDate(),
+          rma: null
+        });
+      } catch (err) {
         console.error("Failed to create ticket:", err);
-        // Rollback optimistic update
-        queryClient.setQueryData(['tickets'], previousTickets);
         alert("Failed to save ticket. Please try again.");
-      });
+      } finally {
+        setIsSaving(false);
+      }
     };
 
     setIsSaving(true);
@@ -295,6 +300,11 @@ function App() {
 
   const confirmAdvanceStatus = async () => {
     if (!advancingItem) return;
+
+    if (!courierCharge || String(courierCharge).trim() === '') {
+      alert("Courier Charge is compulsory to advance to the next stage.");
+      return;
+    }
 
     let newStatus, newClass;
     switch (advancingItem.status) {
@@ -491,6 +501,7 @@ function App() {
       { id: 'vendors', label: 'Vendors', icon: Building2 },
       { id: 'print', label: 'Reports', icon: Printer },
       ...(userRole === 'ADMIN' ? [{ id: 'whatsapp', label: 'WhatsApp Setup', icon: Smartphone }] : []),
+      { id: 'whatsapp-msg', label: 'WhatsApp Msg', icon: MessageSquare },
       { id: 'courier-charges', label: 'Courier Charges', icon: Truck },
     ];
 
@@ -615,6 +626,10 @@ function App() {
 
           {activeTab === 'whatsapp' && (
             <WhatsAppSettings />
+          )}
+
+          {activeTab === 'whatsapp-msg' && (
+            <WhatsAppMsgTab />
           )}
 
           {activeTab === 'courier-charges' && (

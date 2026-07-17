@@ -102,6 +102,7 @@ export default function TicketDetailsModal({
   const [whatsAppFormatOpen, setWhatsAppFormatOpen] = useState(false);
   const [whatsAppMessage, setWhatsAppMessage] = useState('');
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleDeleteService = async (serviceId) => {
     if (!window.confirm("Are you sure you want to delete this service?")) return;
@@ -121,18 +122,28 @@ export default function TicketDetailsModal({
         alert("Please fill required fields: Product, Category, Vendor");
         return;
       }
+      setIsSaving(true);
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
       await axios.put(`${baseUrl}/tickets/${serviceId}`, {
         product: editData.productName,
         category: editData.category,
         serviceVendor: editData.serviceVendor,
-        serialNumber: editData.serialNumber
+        serialNumber: editData.serialNumber,
+        name: editData.name,
+        contactNumber: editData.contactNumber,
+        email: editData.email,
+        description: editData.description,
+        inwardImageURL: editData.inwardImageURL
       });
       setEditingServiceId(null);
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['ticket', serviceId] });
+      alert("Ticket details updated successfully!");
     } catch (err) {
       console.error("Failed to update service:", err);
       alert("Failed to update service.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -215,6 +226,38 @@ export default function TicketDetailsModal({
     });
   };
 
+  const handleEditImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    const fileReaders = files.map(file => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (event) => resolve(event.target.result);
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(fileReaders).then(base64Images => {
+      setEditData(prev => {
+        let existing = [];
+        // Append to existing images if any
+        if (prev.inwardImageURL) {
+          try {
+            const parsed = JSON.parse(prev.inwardImageURL);
+            existing = Array.isArray(parsed) ? parsed : [prev.inwardImageURL];
+          } catch(e) {
+            existing = [prev.inwardImageURL];
+          }
+        }
+        return {
+          ...prev,
+          inwardImageURL: JSON.stringify([...existing, ...base64Images])
+        };
+      });
+    });
+  };
+
   return (
     <div className="modal-overlay">
       <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '1200px', width: '90%', padding: '32px' }}>
@@ -223,7 +266,7 @@ export default function TicketDetailsModal({
         <div className="modal-header" style={{ marginBottom: '24px' }}>
           <div className="modal-title-group">
             <h2 className="modal-title">Ticket Overview</h2>
-            <p className="modal-subtitle">{viewingItem.rma}</p>
+            <p className="modal-subtitle">{service.rma}</p>
           </div>
           <button className="modal-close-btn" onClick={() => setViewingItem(null)}>
             <X size={20} />
@@ -231,23 +274,65 @@ export default function TicketDetailsModal({
         </div>
 
         {/* Customer Details Box */}
-        <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', marginBottom: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '20px', border: '1px solid #e2e8f0' }}>
-          <div>
-            <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Customer Name</div>
-            <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: 600 }}>{viewingItem.name}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Contact</div>
-            <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: 500 }}>{viewingItem.contactNumber}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Email</div>
-            <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: 500 }}>{viewingItem.email || 'N/A'}</div>
-          </div>
-          {viewingItem.description && (
-            <div style={{ gridColumn: '1 / -1' }}>
-              <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Problem Description</div>
-              <div style={{ fontSize: '14px', color: '#334155', lineHeight: '1.6', backgroundColor: 'white', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>{viewingItem.description}</div>
+        <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', marginBottom: '24px', border: '1px solid #e2e8f0' }}>
+          {editingServiceId === service.id ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '20px' }}>
+              <div>
+                <label style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px', display: 'block' }}>Customer Name</label>
+                <input 
+                  type="text" 
+                  value={editData.name || ''} 
+                  onChange={(e) => setEditData({...editData, name: e.target.value})}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px', display: 'block' }}>Contact</label>
+                <input 
+                  type="text" 
+                  value={editData.contactNumber || ''} 
+                  onChange={(e) => setEditData({...editData, contactNumber: e.target.value})}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px', display: 'block' }}>Email</label>
+                <input 
+                  type="text" 
+                  value={editData.email || ''} 
+                  onChange={(e) => setEditData({...editData, email: e.target.value})}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
+                />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px', display: 'block' }}>Problem Description</label>
+                <textarea 
+                  value={editData.description || ''} 
+                  onChange={(e) => setEditData({...editData, description: e.target.value})}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px', minHeight: '80px' }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '20px' }}>
+              <div>
+                <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Customer Name</div>
+                <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: 600 }}>{service.name}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Contact</div>
+                <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: 500 }}>{service.contactNumber}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Email</div>
+                <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: 500 }}>{service.email || 'N/A'}</div>
+              </div>
+              {service.description && (
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '4px' }}>Problem Description</div>
+                  <div style={{ fontSize: '14px', color: '#334155', lineHeight: '1.6', backgroundColor: 'white', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>{service.description}</div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -293,16 +378,74 @@ export default function TicketDetailsModal({
                     style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
                   />
                 </div>
+                <div>
+                  <label style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, marginBottom: '4px', display: 'block' }}>Update Inward Image(s)</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {(() => {
+                      let images = [];
+                      if (editData.inwardImageURL) {
+                        try {
+                          images = JSON.parse(editData.inwardImageURL);
+                          if (!Array.isArray(images)) images = [editData.inwardImageURL];
+                        } catch (e) {
+                          images = [editData.inwardImageURL];
+                        }
+                      }
+                      
+                      if (images.length > 0) {
+                        return (
+                          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                            {images.map((imgSrc, idx) => (
+                              <div key={idx} style={{ width: '60px', height: '60px', borderRadius: '6px', overflow: 'hidden', border: '1px solid #cbd5e1', flexShrink: 0, position: 'relative' }}>
+                                <img src={imgSrc} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const newImages = images.filter((_, i) => i !== idx);
+                                    setEditData(prev => ({ ...prev, inwardImageURL: newImages.length > 0 ? JSON.stringify(newImages) : '' }));
+                                  }}
+                                  style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(239, 68, 68, 0.9)', color: 'white', border: 'none', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                    <div>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 12px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', color: '#475569', fontWeight: 500 }}>
+                        <Upload size={16} /> Add Image(s)
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          multiple
+                          onChange={handleEditImageChange}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                      {editData.inwardImageURL && (
+                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Eye size={12} /> Images attached
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
                   <button 
                     onClick={() => handleUpdateService(service.id)}
-                    style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#10b981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 500, fontSize: '14px', cursor: 'pointer' }}
+                    disabled={isSaving}
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#10b981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 500, fontSize: '14px', cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.75 : 1 }}
                   >
-                    <Save size={16} /> Save
+                    <Save size={16} /> {isSaving ? 'Saving...' : 'Save'}
                   </button>
                   <button 
                     onClick={() => setEditingServiceId(null)}
-                    style={{ background: '#f1f5f9', border: 'none', color: '#64748b', cursor: 'pointer', padding: '8px 16px', borderRadius: '6px', fontSize: '14px', fontWeight: 500 }}
+                    disabled={isSaving}
+                    style={{ background: '#f1f5f9', border: 'none', color: '#64748b', cursor: isSaving ? 'not-allowed' : 'pointer', padding: '8px 16px', borderRadius: '6px', fontSize: '14px', fontWeight: 500, opacity: isSaving ? 0.75 : 1 }}
                   >
                     Cancel
                   </button>
@@ -433,7 +576,12 @@ export default function TicketDetailsModal({
                               productName: service.product,
                               category: service.category,
                               serviceVendor: service.serviceVendor,
-                              serialNumber: service.serialNumber || ''
+                              serialNumber: service.serialNumber || '',
+                              name: service.name,
+                              contactNumber: service.contactNumber,
+                              email: service.email || '',
+                              description: service.description || '',
+                              inwardImageURL: service.inwardImageURL || ''
                             });
                           }}
                         >

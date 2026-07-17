@@ -44,7 +44,7 @@ export default function AdvanceWorkflowModal({
     if (vendorInwardImages && vendorInwardImages.length > 0) {
       printItem.vendorInwardImageURL = JSON.stringify(vendorInwardImages);
     }
-    if (newSerialNumber) printItem.serialNumber = newSerialNumber;
+    if (newSerialNumber) printItem.newSerialNumber = newSerialNumber;
     
     generateTicketPDF(advancingItem.status, printItem);
   };
