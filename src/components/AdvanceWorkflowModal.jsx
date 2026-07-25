@@ -117,6 +117,15 @@ export default function AdvanceWorkflowModal({
                 
                 if (images.length === 0) return null;
 
+                const getFullUrl = (url) => {
+                  if (!url) return '';
+                  if (url.startsWith('http') || url.startsWith('data:')) return url;
+                  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+                  const rootUrl = baseUrl.replace(/\/api$/, '');
+                  const normalizedPath = url.replace(/\\/g, '/');
+                  return `${rootUrl}/${normalizedPath.startsWith('/') ? normalizedPath.slice(1) : normalizedPath}`;
+                };
+
                 return (
                   <div style={{ marginBottom: '16px' }}>
                     <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>
@@ -126,7 +135,7 @@ export default function AdvanceWorkflowModal({
                       {images.map((imgUrl, idx) => (
                         <img 
                           key={idx}
-                          src={imgUrl} 
+                          src={getFullUrl(imgUrl)} 
                           alt={`Inward ${idx + 1}`} 
                           style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px', border: '1px solid #e2e8f0', objectFit: 'contain' }} 
                         />

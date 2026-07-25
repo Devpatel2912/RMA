@@ -431,16 +431,18 @@ function App() {
     }
   };
 
-  const handleSendWhatsAppReport = async (item, messageText) => {
+  const handleSendWhatsAppReport = async (item, messageText, targetPhone = null) => {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
     setGeneratingReportId(item.id);
     try {
       const res = await axios.get(`${baseUrl}/tickets/${item.id}`);
       const fullItem = res.data;
       const staticMsg = messageText || `Hello ${fullItem.name}, your RMA ticket (${fullItem.rma}) has been completed. Please collect your product.`;
+      
+      const phoneToSend = targetPhone || fullItem.contactNumber;
 
       await axios.post(`${baseUrl}/whatsapp/send-text`, {
-        vendorPhone: fullItem.contactNumber,
+        vendorPhone: phoneToSend,
         text: staticMsg
       });
 

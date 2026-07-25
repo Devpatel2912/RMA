@@ -224,9 +224,20 @@ export default function TicketDetailsModal({
   };
 
   const sendWhatsAppMessage = async () => {
-    if (!service.contactNumber) {
-      alert("Customer mobile number is missing.");
-      return;
+    let targetPhone = service.contactNumber;
+    
+    if (whatsAppTargetStage === 'VENDOR OUTWARD' || whatsAppTargetStage === 'VENDOR INWARD') {
+      const vendor = vendors.find(v => v.companyName === service.serviceVendor);
+      targetPhone = vendor?.phoneNumber;
+      if (!targetPhone) {
+        alert("Vendor mobile number is missing.");
+        return;
+      }
+    } else {
+      if (!targetPhone) {
+        alert("Customer mobile number is missing.");
+        return;
+      }
     }
 
     if (!whatsAppMessage.trim()) {
@@ -245,7 +256,7 @@ export default function TicketDetailsModal({
         return;
       }
 
-      await handleSendWhatsAppReport(service, whatsAppMessage.trim());
+      await handleSendWhatsAppReport(service, whatsAppMessage.trim(), targetPhone);
       setWhatsAppFormatOpen(false);
     } catch (err) {
       console.error("Failed to check WhatsApp status or send message:", err);
@@ -458,12 +469,21 @@ export default function TicketDetailsModal({
                         }
                       }
                       
+                      const getFullUrl = (url) => {
+                        if (!url) return '';
+                        if (url.startsWith('http') || url.startsWith('data:')) return url;
+                        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+                        const rootUrl = baseUrl.replace(/\/api$/, '');
+                        const normalizedPath = url.replace(/\\/g, '/');
+                        return `${rootUrl}/${normalizedPath.startsWith('/') ? normalizedPath.slice(1) : normalizedPath}`;
+                      };
+
                       if (images.length > 0) {
                         return (
                           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
                             {images.map((imgSrc, idx) => (
                               <div key={idx} style={{ width: '60px', height: '60px', borderRadius: '6px', overflow: 'hidden', border: '1px solid #cbd5e1', flexShrink: 0, position: 'relative' }}>
-                                <img src={imgSrc} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <img src={getFullUrl(imgSrc)} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 <button 
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -556,6 +576,15 @@ export default function TicketDetailsModal({
                   
                   if (images.length === 0) return null;
 
+                  const getFullUrl = (url) => {
+                    if (!url) return '';
+                    if (url.startsWith('http') || url.startsWith('data:')) return url;
+                    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+                    const rootUrl = baseUrl.replace(/\/api$/, '');
+                    const normalizedPath = url.replace(/\\/g, '/');
+                    return `${rootUrl}/${normalizedPath.startsWith('/') ? normalizedPath.slice(1) : normalizedPath}`;
+                  };
+
                   return (
                     <div style={{ marginBottom: '20px' }}>
                       <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '10px' }}>
@@ -565,14 +594,14 @@ export default function TicketDetailsModal({
                         {images.map((imgUrl, idx) => (
                           <div
                             key={idx}
-                            onClick={() => setPreviewImage(imgUrl)}
+                            onClick={() => setPreviewImage(getFullUrl(imgUrl))}
                             style={{ flexShrink: 0, cursor: 'zoom-in', display: 'inline-block', borderRadius: '10px', overflow: 'hidden', border: '2px solid #e2e8f0', boxShadow: 'none', transition: 'box-shadow 0.2s' }}
                             onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(16,185,129,0.25)'}
                             onMouseLeave={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'}
                             title="Click to view full size"
                           >
                             <img
-                              src={imgUrl}
+                              src={getFullUrl(imgUrl)}
                               alt={`Inward ${idx + 1}`}
                               style={{ maxHeight: '160px', maxWidth: '100%', display: 'block', objectFit: 'contain' }}
                             />
@@ -596,59 +625,62 @@ export default function TicketDetailsModal({
                     {userRole === 'ADMIN' ? (
                       <>
                         {(() => {
-                          const isCompleted = service.status === 'COMPLETED';
-                          const isCustInward = service.status === 'CUSTOMER INWARD';
-                          const isVendOutward = service.status === 'VENDOR OUTWARD';
-                          const isVendInward = service.status === 'VENDOR INWARD';
+                          const stagesOrder = ['CUSTOMER INWARD', 'VENDOR OUTWARD', 'VENDOR INWARD', 'CUSTOMER OUTWARD', 'COMPLETED'];
+                          const currentStageIndex = stagesOrder.indexOf(service.status);
+                          
+                          const isCustInwardEnabled = currentStageIndex >= stagesOrder.indexOf('CUSTOMER INWARD');
+                          const isVendOutwardEnabled = currentStageIndex >= stagesOrder.indexOf('VENDOR OUTWARD');
+                          const isVendInwardEnabled = currentStageIndex >= stagesOrder.indexOf('VENDOR INWARD');
+                          const isCustOutwardEnabled = currentStageIndex >= stagesOrder.indexOf('CUSTOMER OUTWARD');
                           
                           return (
                             <>
                               <button
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isCompleted ? '#ecfdf5' : '#f1f5f9', color: isCompleted ? '#10b981' : '#94a3b8', border: `1px solid ${isCompleted ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isCompleted ? 'pointer' : 'not-allowed', opacity: isCompleted ? 1 : 0.6 }}
-                                disabled={!isCompleted}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isCustInwardEnabled ? '#ecfdf5' : '#f1f5f9', color: isCustInwardEnabled ? '#10b981' : '#94a3b8', border: `1px solid ${isCustInwardEnabled ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isCustInwardEnabled ? 'pointer' : 'not-allowed', opacity: isCustInwardEnabled ? 1 : 0.6 }}
+                                disabled={!isCustInwardEnabled}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   openWhatsAppFormat('CUSTOMER INWARD');
                                 }}
-                                title={isCompleted ? "Send WhatsApp Message for Customer Inward" : "Customer Inward (Already completed)"}
+                                title={isCustInwardEnabled ? "Send WhatsApp Message for Customer Inward" : "Customer Inward"}
                               >
-                                {isCompleted ? <MessageCircle size={16} /> : null} Customer Inward
+                                {isCustInwardEnabled ? <MessageCircle size={16} /> : null} Customer Inward
                               </button>
                               
                               <button
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: (isCustInward || isCompleted) ? '#ecfdf5' : '#f1f5f9', color: (isCustInward || isCompleted) ? '#10b981' : '#94a3b8', border: `1px solid ${(isCustInward || isCompleted) ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: (isCustInward || isCompleted) ? 'pointer' : 'not-allowed', opacity: (isCustInward || isCompleted) ? 1 : 0.6 }}
-                                disabled={!(isCustInward || isCompleted)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isVendOutwardEnabled ? '#ecfdf5' : '#f1f5f9', color: isVendOutwardEnabled ? '#10b981' : '#94a3b8', border: `1px solid ${isVendOutwardEnabled ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isVendOutwardEnabled ? 'pointer' : 'not-allowed', opacity: isVendOutwardEnabled ? 1 : 0.6 }}
+                                disabled={!isVendOutwardEnabled}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   openWhatsAppFormat('VENDOR OUTWARD');
                                 }}
-                                title="Send WhatsApp Message for Vendor Outward"
+                                title={isVendOutwardEnabled ? "Send WhatsApp Message for Vendor Outward" : "Vendor Outward"}
                               >
-                                {(isCustInward || isCompleted) ? <MessageCircle size={16} /> : null} Vendor Outward
+                                {isVendOutwardEnabled ? <MessageCircle size={16} /> : null} Vendor Outward
                               </button>
 
                               <button
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: (isVendOutward || isCompleted) ? '#ecfdf5' : '#f1f5f9', color: (isVendOutward || isCompleted) ? '#10b981' : '#94a3b8', border: `1px solid ${(isVendOutward || isCompleted) ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: (isVendOutward || isCompleted) ? 'pointer' : 'not-allowed', opacity: (isVendOutward || isCompleted) ? 1 : 0.6 }}
-                                disabled={!(isVendOutward || isCompleted)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isVendInwardEnabled ? '#ecfdf5' : '#f1f5f9', color: isVendInwardEnabled ? '#10b981' : '#94a3b8', border: `1px solid ${isVendInwardEnabled ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isVendInwardEnabled ? 'pointer' : 'not-allowed', opacity: isVendInwardEnabled ? 1 : 0.6 }}
+                                disabled={!isVendInwardEnabled}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   openWhatsAppFormat('VENDOR INWARD');
                                 }}
-                                title="Send WhatsApp Message for Vendor Inward"
+                                title={isVendInwardEnabled ? "Send WhatsApp Message for Vendor Inward" : "Vendor Inward"}
                               >
-                                {(isVendOutward || isCompleted) ? <MessageCircle size={16} /> : null} Vendor Inward
+                                {isVendInwardEnabled ? <MessageCircle size={16} /> : null} Vendor Inward
                               </button>
 
                               <button
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: (isVendInward || isCompleted) ? '#ecfdf5' : '#f1f5f9', color: (isVendInward || isCompleted) ? '#10b981' : '#94a3b8', border: `1px solid ${(isVendInward || isCompleted) ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: (isVendInward || isCompleted) ? 'pointer' : 'not-allowed', opacity: (isVendInward || isCompleted) ? 1 : 0.6 }}
-                                disabled={!(isVendInward || isCompleted)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isCustOutwardEnabled ? '#ecfdf5' : '#f1f5f9', color: isCustOutwardEnabled ? '#10b981' : '#94a3b8', border: `1px solid ${isCustOutwardEnabled ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isCustOutwardEnabled ? 'pointer' : 'not-allowed', opacity: isCustOutwardEnabled ? 1 : 0.6 }}
+                                disabled={!isCustOutwardEnabled}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   openWhatsAppFormat('CUSTOMER OUTWARD');
                                 }}
-                                title="Send WhatsApp Message for Customer Outward"
+                                title={isCustOutwardEnabled ? "Send WhatsApp Message for Customer Outward" : "Customer Outward"}
                               >
-                                {(isVendInward || isCompleted) ? <MessageCircle size={16} /> : null} Customer Outward
+                                {isCustOutwardEnabled ? <MessageCircle size={16} /> : null} Customer Outward
                               </button>
                             </>
                           );
