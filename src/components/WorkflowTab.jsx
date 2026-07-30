@@ -225,6 +225,7 @@ export default function WorkflowTab({
               <th className="workflow-th">Customer</th>
               <th className="workflow-th">Product</th>
               <th className="workflow-th">Serial</th>
+              <th className="workflow-th">Company Name</th>
               <th className="workflow-th">Stage</th>
               <th className="workflow-th" style={{ textAlign: 'center' }}>Action</th>
             </tr>
@@ -232,7 +233,7 @@ export default function WorkflowTab({
           <tbody>
             {paginatedGroups.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
+                <td colSpan={8} style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
                   <Search size={28} style={{ marginBottom: 12, opacity: 0.3, display: 'block', margin: '0 auto 12px' }} />
                   <div style={{ fontSize: 14 }}>No tickets match the current filters.</div>
                 </td>
@@ -269,11 +270,14 @@ export default function WorkflowTab({
                         {mainItem.product.length > 26 ? mainItem.product.substring(0, 26) + '…' : mainItem.product}
                       </span>
                       <span className="table-cell-sub">
-                        {mainItem.category} · {mainItem.serviceVendor}
+                        {mainItem.category}
                       </span>
                     </td>
                     <td className="workflow-td">
                       <span className="table-serial">{mainItem.serialNumber || '—'}</span>
+                    </td>
+                    <td className="workflow-td">
+                      <span className="table-cell-main" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{mainItem.serviceVendor}</span>
                     </td>
                     <td className="workflow-td">
                       <span className={`status-badge ${mainItem.statusClass}`}>

@@ -3,6 +3,8 @@ import { X, Camera, Upload, User, Package, Tag, Building2, Hash, Mail, Calendar,
 import CameraCapture from './CameraCapture';
 import { useCategories, useVendors } from '../api/hooks';
 import Spinner from './Spinner';
+import Select from 'react-select';
+import { Country, State, City } from 'country-state-city';
 
 /* ─────────── Searchable Dropdown ─────────── */
 const SearchableDropdown = ({ options, value, onChange, placeholder, icon: Icon }) => {
@@ -134,6 +136,135 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
     fontFamily: 'Inter, sans-serif',
     width: '100%', outline: 'none',
     transition: 'all 0.18s',
+  };
+
+  const customSelectStyles = {
+    control: (provided, state) => ({
+      ...provided,
+      backgroundColor: state.isFocused ? 'var(--surface)' : 'var(--surface-hover)',
+      borderColor: state.isFocused ? 'var(--primary)' : 'var(--border)',
+      boxShadow: state.isFocused ? '0 0 0 3px rgba(4,120,87,0.12)' : 'none',
+      borderRadius: 'var(--radius-sm)',
+      padding: '2px',
+      fontSize: 14,
+      fontFamily: 'Inter, sans-serif',
+      transition: 'all 0.18s',
+      cursor: 'pointer',
+      '&:hover': {
+        borderColor: state.isFocused ? 'var(--primary)' : 'var(--border)'
+      }
+    }),
+    menu: (provided) => ({
+      ...provided,
+      backgroundColor: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--radius-sm)',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+      zIndex: 100
+    }),
+    option: (provided, state) => ({
+      ...provided,
+      backgroundColor: state.isSelected ? 'var(--primary)' : state.isFocused ? 'var(--surface-hover)' : 'transparent',
+      color: state.isSelected ? '#fff' : 'var(--text-primary)',
+      fontSize: 13.5,
+      cursor: 'pointer',
+      '&:active': {
+        backgroundColor: 'var(--primary-light)',
+      }
+    }),
+    singleValue: (provided) => ({
+      ...provided,
+      color: 'var(--text-primary)'
+    }),
+    input: (provided) => ({
+      ...provided,
+      color: 'var(--text-primary)'
+    }),
+    placeholder: (provided) => ({
+      ...provided,
+      color: 'var(--text-muted)'
+    })
+  };
+
+  const countryOptions = Country.getAllCountries().map(c => ({ value: c.isoCode, label: c.name }));
+  const stateOptions = formData.country?.value 
+    ? State.getStatesOfCountry(formData.country.value).map(s => ({ value: s.isoCode, label: s.name })) 
+    : [];
+  const cityOptions = (formData.country?.value && formData.state?.value) 
+    ? City.getCitiesOfState(formData.country.value, formData.state.value).map(c => ({ value: c.name, label: c.name })) 
+    : [];
+
+  const handleCountryChange = (selectedOption) => {
+    setFormData(prev => ({ ...prev, country: selectedOption, state: null, city: null }));
+  };
+
+  const handleStateChange = (selectedOption) => {
+    setFormData(prev => ({ ...prev, state: selectedOption, city: null }));
+  };
+
+  const handleCityChange = (selectedOption) => {
+    setFormData(prev => ({ ...prev, city: selectedOption }));
+  };
+
+  const handlePincodeChange = async (e) => {
+    const code = e.target.value;
+    setFormData(prev => ({ ...prev, pincode: code }));
+    
+    // Auto-fetch city and state by pincode
+    if (code.length === 6) {
+      try {
+        const response = await fetch(`https://api.postalpincode.in/pincode/${code}`);
+        const data = await response.json();
+        
+        if (data && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+          const postOffice = data[0].PostOffice[0];
+          const apiStateName = postOffice.State;
+          const apiCityName = postOffice.District || postOffice.Block || postOffice.Region || postOffice.Name;
+
+          // Default Country to India for this API
+          const country = { value: 'IN', label: 'India' };
+          
+          // Find matching state from country-state-city
+          const states = State.getStatesOfCountry('IN');
+          const matchingState = states.find(s => 
+            s.name.toLowerCase() === apiStateName.toLowerCase() || 
+            s.name.toLowerCase().includes(apiStateName.toLowerCase())
+          );
+          
+          let state = null;
+          let city = null;
+
+          if (matchingState) {
+            state = { value: matchingState.isoCode, label: matchingState.name };
+            
+            // Find matching city
+            const cities = City.getCitiesOfState('IN', matchingState.isoCode);
+            const matchingCity = cities.find(c => 
+              c.name.toLowerCase() === apiCityName.toLowerCase() || 
+              c.name.toLowerCase().includes(apiCityName.toLowerCase()) ||
+              apiCityName.toLowerCase().includes(c.name.toLowerCase())
+            );
+            
+            if (matchingCity) {
+              city = { value: matchingCity.name, label: matchingCity.name };
+            } else {
+              // Fallback to API city name if not found in library
+              city = { value: apiCityName, label: apiCityName };
+            }
+          }
+
+          setFormData(prev => ({ 
+            ...prev, 
+            country: prev.country || country, 
+            state: state || prev.state, 
+            city: city || prev.city, 
+            pincode: code 
+          }));
+        }
+      } catch (err) {
+        console.error("Error fetching pincode data:", err);
+      }
+    }
   };
 
   return (
@@ -278,18 +409,53 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
                   </div>
                 </Field>
 
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <Field label="Permanent Address">
-                    <textarea
-                      name="customerAddress" value={formData.customerAddress || ''}
-                      onChange={handleInputChange} rows={2}
-                      placeholder="Street, Building, City, State, Zip"
-                      style={{ ...inputStyle, resize: 'vertical', alignItems: 'flex-start', minHeight: 72, lineHeight: 1.5 }}
+                <Field label="Country *">
+                  <Select
+                    options={countryOptions}
+                    value={formData.country || null}
+                    onChange={handleCountryChange}
+                    placeholder="Select Country"
+                    styles={customSelectStyles}
+                    isSearchable
+                  />
+                </Field>
+
+                <Field label="State *">
+                  <Select
+                    options={stateOptions}
+                    value={formData.state || null}
+                    onChange={handleStateChange}
+                    placeholder="Select State"
+                    styles={customSelectStyles}
+                    isDisabled={!formData.country}
+                    isSearchable
+                  />
+                </Field>
+
+                <Field label="City *">
+                  <Select
+                    options={cityOptions}
+                    value={formData.city || null}
+                    onChange={handleCityChange}
+                    placeholder="Select City"
+                    styles={customSelectStyles}
+                    isDisabled={!formData.state}
+                    isSearchable
+                  />
+                </Field>
+
+                <Field label="Pincode *">
+                  <div style={{ position: 'relative' }}>
+                    <Hash size={14} color="var(--text-muted)" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 1 }} />
+                    <input
+                      type="text" name="pincode" value={formData.pincode || ''}
+                      onChange={handlePincodeChange} placeholder="Enter Pincode"
+                      style={{ ...inputStyle, paddingLeft: 36 }}
                       onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(4,120,87,0.12)'; e.target.style.background = 'var(--surface)'; }}
                       onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; e.target.style.background = 'var(--surface-hover)'; }}
                     />
-                  </Field>
-                </div>
+                  </div>
+                </Field>
               </div>
             </div>
 

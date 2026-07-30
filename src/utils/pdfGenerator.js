@@ -174,30 +174,42 @@ export const generateTicketPDF = (stageName, ticket) => {
   processField(ticket.inwardImageURL, 'Inward Image');
   processField(ticket.outwardImageURL, 'Outward Image');
   processField(ticket.vendorInwardImageURL, 'Vendor Inward Image');
+  y += 20;
+  font('bold', 12); doc.text('Reference Image Links', margin + 5, y);
+  y += 15;
+
   if (links.length > 0) {
-    y += 20;
-    font('bold', 12); doc.text('Reference Image Links', margin + 5, y);
-    y += 15;
     font('normal', 10);
     doc.setTextColor(0, 0, 255); // Blue for links
 
     links.forEach(l => {
-      const linkText = `${l.label}: ${l.url}`;
-      // Just print the text. Since it's a normal URL now (not a massive base64 string),
-      // PDF viewers will automatically make it clickable, and users can see where it points!
+      const linkText = `${l.label}`;
+      
+      // Just print the label
       doc.text(linkText, margin + 5, y);
       
-      // Optional: still add the bounding box link just in case
       const textWidth = doc.getTextWidth(linkText);
+      // Draw an underline to indicate it's clickable
+      doc.setDrawColor(0, 0, 255);
+      doc.line(margin + 5, y + 1, margin + 5 + textWidth, y + 1);
+      
+      // Add the invisible bounding box link
       doc.link(margin + 5, y - 10, textWidth, 12, { url: l.url });
       
       y += 15;
     });
 
     doc.setTextColor(0, 0, 0); // Reset color
-    y += 5;
-    ln(margin, y, margin + cW, y);
+  } else {
+    font('normal', 10);
+    doc.setTextColor(150, 150, 150); // Gray
+    doc.text('Image Not Found', margin + 5, y);
+    doc.setTextColor(0, 0, 0);
+    y += 15;
   }
+  
+  y += 5;
+  ln(margin, y, margin + cW, y);
 
   // Footer Signature
   const footerY = yStart + 700;

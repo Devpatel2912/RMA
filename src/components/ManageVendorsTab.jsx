@@ -19,7 +19,7 @@ export default function ManageVendorsTab({ userRole }) {
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [formData, setFormData] = useState({
-    companyName: '', address: '', gstNumber: '', phoneNumber: '', email: ''
+    companyName: '', address: '', gstNumber: '', phoneNumber: '', email: '', panNumber: ''
   });
 
   const handleInputChange = (e) => {
@@ -29,6 +29,10 @@ export default function ManageVendorsTab({ userRole }) {
 
   const handleSave = async () => {
     if (!formData.companyName.trim()) { alert('Company Name is required'); return; }
+    if (!formData.address.trim()) { alert('Address is required'); return; }
+    if (!formData.phoneNumber.trim()) { alert('Phone Number is required'); return; }
+    if (!formData.email.trim()) { alert('Email is required'); return; }
+    if (!formData.panNumber?.trim()) { alert('PAN Number is required'); return; }
     setIsSaving(true);
     try {
       if (editingId) {
@@ -38,10 +42,11 @@ export default function ManageVendorsTab({ userRole }) {
       }
       setIsModalOpen(false);
       setEditingId(null);
-      setFormData({ companyName: '', address: '', gstNumber: '', phoneNumber: '', email: '' });
+      setFormData({ companyName: '', address: '', gstNumber: '', phoneNumber: '', email: '', panNumber: '' });
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
     } catch (err) {
-      alert(`Failed to ${editingId ? 'update' : 'add'} vendor. Note: Only Admins can modify vendors.`);
+      const errorMessage = err.response?.data?.error || err.message || 'Unknown error occurred';
+      alert(`Failed to ${editingId ? 'update' : 'add'} vendor.\nServer Error: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
@@ -67,7 +72,8 @@ export default function ManageVendorsTab({ userRole }) {
       address: vendor.address || '',
       gstNumber: vendor.gstNumber || '',
       phoneNumber: vendor.phoneNumber || '',
-      email: vendor.email || ''
+      email: vendor.email || '',
+      panNumber: vendor.panNumber || ''
     });
     setIsModalOpen(true);
   };
@@ -96,7 +102,7 @@ export default function ManageVendorsTab({ userRole }) {
             className="btn-save"
             onClick={() => {
               setEditingId(null);
-              setFormData({ companyName: '', address: '', gstNumber: '', phoneNumber: '', email: '' });
+              setFormData({ companyName: '', address: '', gstNumber: '', phoneNumber: '', email: '', panNumber: '' });
               setIsModalOpen(true);
             }}
             style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', flex: 'unset', width: 'auto' }}
@@ -199,6 +205,12 @@ export default function ManageVendorsTab({ userRole }) {
                       <span style={{ fontSize: 12.5, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>GST: {ven.gstNumber}</span>
                     </div>
                   )}
+                  {ven.panNumber && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <FileText size={13} color="var(--text-muted)" />
+                      <span style={{ fontSize: 12.5, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>PAN: {ven.panNumber}</span>
+                    </div>
+                  )}
                   {ven.phoneNumber && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <Phone size={13} color="var(--text-muted)" />
@@ -238,7 +250,7 @@ export default function ManageVendorsTab({ userRole }) {
                 <input type="text" className="form-input" name="companyName" value={formData.companyName} onChange={handleInputChange} placeholder="e.g. ASUS Service Center" />
               </div>
               <div className="form-group">
-                <label className="form-label">Address</label>
+                <label className="form-label">Address *</label>
                 <textarea className="form-textarea" name="address" value={formData.address} onChange={handleInputChange} placeholder="Full address..." rows="2" />
               </div>
               <div className="form-group">
@@ -247,7 +259,7 @@ export default function ManageVendorsTab({ userRole }) {
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">Phone (WhatsApp)</label>
+                  <label className="form-label">Phone (WhatsApp) *</label>
                   <div style={{ display: 'flex', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', transition: 'border-color 0.18s' }}
                     onFocusCapture={e => e.currentTarget.style.borderColor = 'var(--primary)'}
                     onBlurCapture={e => e.currentTarget.style.borderColor = 'var(--border)'}
@@ -266,9 +278,13 @@ export default function ManageVendorsTab({ userRole }) {
                   </div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Email</label>
+                  <label className="form-label">Email *</label>
                   <input type="email" className="form-input" name="email" value={formData.email} onChange={handleInputChange} placeholder="vendor@example.com" />
                 </div>
+              </div>
+              <div className="form-group" style={{ marginTop: 16 }}>
+                <label className="form-label">PAN Number *</label>
+                <input type="text" className="form-input" name="panNumber" value={formData.panNumber || ''} onChange={(e) => handleInputChange({ target: { name: 'panNumber', value: e.target.value.toUpperCase() } })} placeholder="ABCDE1234F" maxLength="10" />
               </div>
             </div>
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Camera, Upload, X } from 'lucide-react';
 import CameraCapture from './CameraCapture';
 import { generateTicketPDF } from '../utils/pdfGenerator';
+import { useVendors } from '../api/hooks';
 
 const MAX_VENDOR_INWARD_IMAGES = 3;
 
@@ -18,6 +19,8 @@ export default function AdvanceWorkflowModal({
 }) {
   const [isDocketCameraOpen, setIsDocketCameraOpen] = useState(false);
   const [isProductCameraOpen, setIsProductCameraOpen] = useState(false);
+  
+  const { data: vendors = [] } = useVendors();
 
   const addVendorInwardImages = (images) => {
     const currentImages = vendorInwardImages || [];
@@ -87,7 +90,17 @@ export default function AdvanceWorkflowModal({
                   </div>
                   <div className="detail-item">
                     <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Service Vendor</span>
-                    <span style={{ fontSize: '14px', color: '#0f172a', fontWeight: 500 }}>{advancingItem.serviceVendor}</span>
+                    <select 
+                      className="form-input" 
+                      style={{ padding: '6px', fontSize: '14px', border: '1px solid #e2e8f0', borderRadius: '4px', width: '100%', backgroundColor: 'white' }}
+                      value={advancingItem.serviceVendor || ''}
+                      onChange={(e) => setAdvancingItem({ ...advancingItem, serviceVendor: e.target.value })}
+                    >
+                      <option value="">Select Vendor...</option>
+                      {vendors.map(v => (
+                        <option key={v.id} value={v.companyName}>{v.companyName}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="detail-item">
                     <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Serial Number</span>

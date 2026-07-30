@@ -43,7 +43,6 @@ import ManageVendorsTab from './components/ManageVendorsTab';
 import NewInwardModal from './components/NewInwardModal';
 import AdvanceWorkflowModal from './components/AdvanceWorkflowModal';
 import TicketDetailsModal from './components/TicketDetailsModal';
-import PrintReportsTab from './components/PrintReportsTab';
 import WhatsAppSettings from './components/WhatsAppSettings';
 import CourierChargesTab from './components/CourierChargesTab';
 import WhatsAppMsgTab from './components/WhatsAppMsgTab';
@@ -61,7 +60,7 @@ function App() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
 
-  
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -72,12 +71,12 @@ function App() {
   const [newSerialNumber, setNewSerialNumber] = useState('');
   const [docketNumber, setDocketNumber] = useState('');
   const [courierCharge, setCourierCharge] = useState('');
-  
+
   const [vendorInwardImages, setVendorInwardImages] = useState([]);
   const [customMessage, setCustomMessage] = useState('');
   const [generatingReportId, setGeneratingReportId] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-US', { hour12: false }));
-  
+
   // Theme state — persisted in localStorage
   const [theme, setTheme] = useState(() => localStorage.getItem('rma-theme') || 'light');
 
@@ -147,7 +146,7 @@ function App() {
 
     const handleKeyDown = (e) => {
       const currentTime = Date.now();
-      
+
       // If time between keystrokes is more than 50ms, consider it manual typing and reset
       if (currentTime - lastKeyTime > 50) {
         barcode = '';
@@ -164,7 +163,7 @@ function App() {
       } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
         barcode += e.key;
       }
-      
+
       lastKeyTime = currentTime;
     };
 
@@ -201,7 +200,7 @@ function App() {
     const finalizeSave = async (imgData = null) => {
       setIsSaving(true);
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
-      
+
       try {
         const res = await axios.post(`${baseUrl}/tickets`, {
           rma: newRma,
@@ -218,7 +217,7 @@ function App() {
           serviceVendor: formData.serviceVendor,
           inwardImageURL: imgData
         });
-        
+
         const serverTicket = res.data;
         const newTicket = {
           id: serverTicket.id.toString(),
@@ -240,7 +239,7 @@ function App() {
 
         // Instantly update UI with the real ticket ID
         queryClient.setQueryData(['tickets'], (old = []) => [newTicket, ...old]);
-        
+
         // Also invalidate just in case
         queryClient.invalidateQueries({ queryKey: ['tickets'] });
 
@@ -273,7 +272,7 @@ function App() {
       let loadedCount = 0;
       formData.images.forEach(file => {
         const reader = new FileReader();
-        reader.onload = function(event) {
+        reader.onload = function (event) {
           uploadedImages.push(event.target.result);
           loadedCount += 1;
           if (loadedCount === formData.images.length) {
@@ -330,7 +329,7 @@ function App() {
     }
 
     let updatedItem = { ...advancingItem, status: newStatus, statusClass: newClass, date: formattedDate };
-    
+
     const updateData = {
       status: newStatus,
       date: formattedDate
@@ -359,6 +358,10 @@ function App() {
       updateData.docketNumber = docketNumber;
       updatedItem.courierCharge = courierCharge;
       updateData.courierCharge = courierCharge;
+      
+      // Pass the potentially modified service vendor to backend
+      updatedItem.serviceVendor = advancingItem.serviceVendor;
+      updateData.serviceVendor = advancingItem.serviceVendor;
     } else if (advancingItem.status === 'VENDOR INWARD') {
       if (vendorInwardImages && vendorInwardImages.length > 0) {
         const imgsString = JSON.stringify(vendorInwardImages);
@@ -369,7 +372,7 @@ function App() {
 
 
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
-    
+
     // Optimistic Update: instantly update the UI cache
     queryClient.setQueryData(['tickets'], (old) => {
       if (!old) return old;
@@ -395,7 +398,7 @@ function App() {
       // Fetch the full ticket to get the images, as they are excluded from the main list for performance
       const res = await axios.get(`${baseUrl}/tickets/${item.id}`);
       const fullItem = res.data;
-      
+
       // 1. Generate and download/print the highly-styled PDF using the full item
       generateTicketPDF('COMPLETED', fullItem);
 
@@ -409,13 +412,13 @@ function App() {
 
         await axios.put(`${baseUrl}/tickets/${item.id}/status`, { status: 'COMPLETED', date: getTodayDate() });
         queryClient.invalidateQueries({ queryKey: ['tickets'] });
-        
+
         // After successfully marking completed, send WhatsApp to customer
         const payloadItem = { ...fullItem, customerName: fullItem.name };
         try {
-          const waRes = await axios.post(`${baseUrl}/whatsapp/send-pdf`, { 
-            ticketData: payloadItem, 
-            message: `Hello ${fullItem.name}, your RMA ticket (${fullItem.rma}) has been completed. Please find your final replacement report attached.` 
+          const waRes = await axios.post(`${baseUrl}/whatsapp/send-pdf`, {
+            ticketData: payloadItem,
+            message: `Hello ${fullItem.name}, your RMA ticket (${fullItem.rma}) has been completed. Please find your final replacement report attached.`
           });
           console.log("Final Report WhatsApp Sent:", waRes.data);
         } catch (err) {
@@ -438,7 +441,7 @@ function App() {
       const res = await axios.get(`${baseUrl}/tickets/${item.id}`);
       const fullItem = res.data;
       const staticMsg = messageText || `Hello ${fullItem.name}, your RMA ticket (${fullItem.rma}) has been completed. Please collect your product.`;
-      
+
       const phoneToSend = targetPhone || fullItem.contactNumber;
 
       await axios.post(`${baseUrl}/whatsapp/send-text`, {
@@ -501,7 +504,6 @@ function App() {
       { id: 'workflow', label: 'Workflow', icon: Workflow },
       { id: 'categories', label: 'Categories', icon: Package },
       { id: 'vendors', label: 'Vendors', icon: Building2 },
-      { id: 'print', label: 'Reports', icon: Printer },
       ...(userRole === 'ADMIN' ? [{ id: 'whatsapp', label: 'WhatsApp Setup', icon: Smartphone }] : []),
       { id: 'whatsapp-msg', label: 'WhatsApp Msg', icon: MessageSquare },
       { id: 'courier-charges', label: 'Courier Charges', icon: Truck },
@@ -510,202 +512,198 @@ function App() {
     return (
       <div className="layout">
 
-      {/* Mobile Header */}
-      <div className="mobile-header">
-        <div className="brand" style={{ margin: 0 }}>
-          <div className="brand-logo">R</div>
-          <span className="brand-title">RMA Flow</span>
-        </div>
-        <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(true)}>
-          <Menu size={20} color="white" />
-        </button>
-      </div>
-
-      {/* Mobile Drawer Overlay */}
-      {isMobileMenuOpen && (
-        <div className="mobile-overlay" onClick={() => setIsMobileMenuOpen(false)}></div>
-      )}
-
-      {/* Sidebar */}
-      <div className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-        <div className="brand">
-          <div className="brand-logo">R</div>
-          <div>
-            <div className="brand-title">RMA Flow</div>
-            <div className="brand-subtitle">Service Management</div>
+        {/* Mobile Header */}
+        <div className="mobile-header">
+          <div className="brand" style={{ margin: 0 }}>
+            <div className="brand-logo">R</div>
+            <span className="brand-title">RMA Flow</span>
           </div>
-        </div>
-
-        <div className="nav-menu">
-          {navItems.map(({ id, label, icon: Icon }) => (
-            <div
-              key={id}
-              className={`nav-item ${activeTab === id ? 'active' : ''}`}
-              onClick={() => handleTabChange(id)}
-            >
-              <Icon size={18} />
-              <span>{label}</span>
-            </div>
-          ))}
-        </div>
-
-        <button className="new-inward-btn" onClick={() => { 
-          setFormData({
-            customerName: '',
-            contactNumber: '',
-            email: '',
-            productName: '',
-            category: '',
-            serviceVendor: '',
-            serialNumber: '',
-            description: '',
-            images: [],
-            inwardDate: getTodayDate(),
-            rma: null
-          });
-          setIsModalOpen(true); 
-          setIsMobileMenuOpen(false); 
-        }}>
-          <Plus size={18} />
-          <span>New Inward</span>
-        </button>
-
-        <div className="logout-btn-container">
-
-
-          {/* Logout */}
-          <button className="logout-btn" onClick={() => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('userRole');
-            delete axios.defaults.headers.common['Authorization'];
-            setIsLoggedIn(false);
-          }}>
-            <LogOut size={17} />
-            <span>Sign Out</span>
+          <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(true)}>
+            <Menu size={20} color="white" />
           </button>
         </div>
-      </div>
 
-      {/* Main Content Area */}
-      <div className="main-container">
+        {/* Mobile Drawer Overlay */}
+        {isMobileMenuOpen && (
+          <div className="mobile-overlay" onClick={() => setIsMobileMenuOpen(false)}></div>
+        )}
 
-        {/* Main Content Scrollable Area */}
-        <div className="main-content">
-          {activeTab === 'dashboard' && (
-            <DashboardTab 
-              handleExportData={handleExportData} 
-              setViewingItem={setViewingItem} 
-            />
-          )}
-
-          {activeTab === 'workflow' && (
-            <WorkflowTab 
-              recentActivities={recentActivities}
-              setAdvancingItem={handleOpenAdvanceModal}
-              setAdvanceDate={setAdvanceDate}
-              setNewSerialNumber={setNewSerialNumber}
-              setDocketNumber={setDocketNumber}
-              setCourierCharge={setCourierCharge}
-              getTodayDate={getTodayDate}
-              handleGenerateReport={handleGenerateReport}
-              generatingReportId={generatingReportId}
-              setViewingItem={setViewingItem}
-              userRole={userRole}
-            />
-          )}
-
-          {activeTab === 'categories' && (
-            <ManageCategoriesTab userRole={userRole} />
-          )}
-
-          {activeTab === 'vendors' && (
-            <ManageVendorsTab userRole={userRole} />
-          )}
-
-          {activeTab === 'print' && (
-            <PrintReportsTab recentActivities={recentActivities} />
-          )}
-
-          {activeTab === 'whatsapp' && (
-            <WhatsAppSettings />
-          )}
-
-          {activeTab === 'whatsapp-msg' && (
-            <WhatsAppMsgTab />
-          )}
-
-          {activeTab === 'courier-charges' && (
-            <CourierChargesTab recentActivities={recentActivities} />
-          )}
-        </div>
-
-        {/* Footer Status Bar */}
-        <div className="status-bar">
-          <div className="status-left">
-            <div className="status-item">
-              <div className="status-dot"></div>
-              <span>System Ready</span>
+        {/* Sidebar */}
+        <div className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+          <div className="brand">
+            <div className="brand-logo">R</div>
+            <div>
+              <div className="brand-title">AV XPERTS</div>
+              <div className="brand-subtitle">Service Management</div>
             </div>
-            <div className="status-divider"></div>
-            <span>Total Records: <strong>{recentActivities.length}</strong></span>
           </div>
 
-          <div className="status-right">
-            <span>VO: <strong>{recentActivities.filter(a => a.status === 'VENDOR OUTWARD').length}</strong></span>
-            <span>VI: <strong>{recentActivities.filter(a => a.status === 'VENDOR INWARD').length}</strong></span>
-            <span>CO: <strong>{recentActivities.filter(a => a.status === 'CUSTOMER OUTWARD').length}</strong></span>
-            <div className="status-divider"></div>
-            <span>{currentTime}</span>
+          <div className="nav-menu">
+            {navItems.map(({ id, label, icon: Icon }) => (
+              <div
+                key={id}
+                className={`nav-item ${activeTab === id ? 'active' : ''}`}
+                onClick={() => handleTabChange(id)}
+              >
+                <Icon size={18} />
+                <span>{label}</span>
+              </div>
+            ))}
+          </div>
+
+          <button className="new-inward-btn" onClick={() => {
+            setFormData({
+              customerName: '',
+              contactNumber: '',
+              email: '',
+              productName: '',
+              category: '',
+              serviceVendor: '',
+              serialNumber: '',
+              description: '',
+              images: [],
+              inwardDate: getTodayDate(),
+              rma: null
+            });
+            setIsModalOpen(true);
+            setIsMobileMenuOpen(false);
+          }}>
+            <Plus size={18} />
+            <span>New Inward</span>
+          </button>
+
+          <div className="logout-btn-container">
+
+
+            {/* Logout */}
+            <button className="logout-btn" onClick={() => {
+              localStorage.removeItem('token');
+              localStorage.removeItem('userRole');
+              delete axios.defaults.headers.common['Authorization'];
+              setIsLoggedIn(false);
+            }}>
+              <LogOut size={17} />
+              <span>Sign Out</span>
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Modals */}
-      {isModalOpen && (
-        <NewInwardModal
-          setIsModalOpen={setIsModalOpen}
-          formData={formData}
-          setFormData={setFormData}
-          handleInputChange={handleInputChange}
-          handleSaveInward={handleSaveInward}
-          isSaving={isSaving}
+        {/* Main Content Area */}
+        <div className="main-container">
+
+          {/* Main Content Scrollable Area */}
+          <div className="main-content">
+            {activeTab === 'dashboard' && (
+              <DashboardTab
+                handleExportData={handleExportData}
+                setViewingItem={setViewingItem}
+              />
+            )}
+
+            {activeTab === 'workflow' && (
+              <WorkflowTab
+                recentActivities={recentActivities}
+                setAdvancingItem={handleOpenAdvanceModal}
+                setAdvanceDate={setAdvanceDate}
+                setNewSerialNumber={setNewSerialNumber}
+                setDocketNumber={setDocketNumber}
+                setCourierCharge={setCourierCharge}
+                getTodayDate={getTodayDate}
+                handleGenerateReport={handleGenerateReport}
+                generatingReportId={generatingReportId}
+                setViewingItem={setViewingItem}
+                userRole={userRole}
+              />
+            )}
+
+            {activeTab === 'categories' && (
+              <ManageCategoriesTab userRole={userRole} />
+            )}
+
+            {activeTab === 'vendors' && (
+              <ManageVendorsTab userRole={userRole} />
+            )}
+
+            {activeTab === 'whatsapp' && (
+              <WhatsAppSettings />
+            )}
+
+            {activeTab === 'whatsapp-msg' && (
+              <WhatsAppMsgTab />
+            )}
+
+            {activeTab === 'courier-charges' && (
+              <CourierChargesTab recentActivities={recentActivities} />
+            )}
+          </div>
+
+          {/* Footer Status Bar */}
+          <div className="status-bar">
+            <div className="status-left">
+              <div className="status-item">
+                <div className="status-dot"></div>
+                <span>System Ready</span>
+              </div>
+              <div className="status-divider"></div>
+              <span>Total Records: <strong>{recentActivities.length}</strong></span>
+            </div>
+
+            <div className="status-right">
+              <span>VO: <strong>{recentActivities.filter(a => a.status === 'VENDOR OUTWARD').length}</strong></span>
+              <span>VI: <strong>{recentActivities.filter(a => a.status === 'VENDOR INWARD').length}</strong></span>
+              <span>CO: <strong>{recentActivities.filter(a => a.status === 'CUSTOMER OUTWARD').length}</strong></span>
+              <div className="status-divider"></div>
+              <span>{currentTime}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Modals */}
+        {isModalOpen && (
+          <NewInwardModal
+            setIsModalOpen={setIsModalOpen}
+            formData={formData}
+            setFormData={setFormData}
+            handleInputChange={handleInputChange}
+            handleSaveInward={handleSaveInward}
+            isSaving={isSaving}
+          />
+        )}
+
+        <TicketDetailsModal
+          viewingItem={viewingItem}
+          setViewingItem={setViewingItem}
+          setAdvancingItem={setAdvancingItem}
+          setAdvanceDate={setAdvanceDate}
+          setNewSerialNumber={setNewSerialNumber}
+          setDocketNumber={setDocketNumber}
+          setCourierCharge={setCourierCharge}
+          getTodayDate={getTodayDate}
+          handleGenerateReport={handleGenerateReport}
+          handleSendWhatsAppReport={handleSendWhatsAppReport}
+          userRole={userRole}
         />
-      )}
 
-      <TicketDetailsModal
-        viewingItem={viewingItem}
-        setViewingItem={setViewingItem}
-        setAdvancingItem={setAdvancingItem}
-        setAdvanceDate={setAdvanceDate}
-        setNewSerialNumber={setNewSerialNumber}
-        setDocketNumber={setDocketNumber}
-        setCourierCharge={setCourierCharge}
-        getTodayDate={getTodayDate}
-        handleGenerateReport={handleGenerateReport}
-        handleSendWhatsAppReport={handleSendWhatsAppReport}
-        userRole={userRole}
-      />
-
-      <AdvanceWorkflowModal
-        advancingItem={advancingItem}
-        setAdvancingItem={setAdvancingItem}
-        shippingImagePreview={shippingImagePreview}
-        setShippingImagePreview={setShippingImagePreview}
-        vendorInwardImages={vendorInwardImages}
-        setVendorInwardImages={setVendorInwardImages}
-        advanceDate={advanceDate}
-        setAdvanceDate={setAdvanceDate}
-        newSerialNumber={newSerialNumber}
-        setNewSerialNumber={setNewSerialNumber}
-        docketNumber={docketNumber}
-        setDocketNumber={setDocketNumber}
-        courierCharge={courierCharge}
-        setCourierCharge={setCourierCharge}
-        customMessage={customMessage}
-        setCustomMessage={setCustomMessage}
-        confirmAdvanceStatus={confirmAdvanceStatus}
-      />
-    </div>
+        <AdvanceWorkflowModal
+          advancingItem={advancingItem}
+          setAdvancingItem={setAdvancingItem}
+          shippingImagePreview={shippingImagePreview}
+          setShippingImagePreview={setShippingImagePreview}
+          vendorInwardImages={vendorInwardImages}
+          setVendorInwardImages={setVendorInwardImages}
+          advanceDate={advanceDate}
+          setAdvanceDate={setAdvanceDate}
+          newSerialNumber={newSerialNumber}
+          setNewSerialNumber={setNewSerialNumber}
+          docketNumber={docketNumber}
+          setDocketNumber={setDocketNumber}
+          courierCharge={courierCharge}
+          setCourierCharge={setCourierCharge}
+          customMessage={customMessage}
+          setCustomMessage={setCustomMessage}
+          confirmAdvanceStatus={confirmAdvanceStatus}
+        />
+      </div>
     );
   };
 

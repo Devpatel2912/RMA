@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Plus, Eye, Save, Upload, ChevronDown, Search, ArrowRightCircle, Share, Edit2, Trash2, MessageCircle } from 'lucide-react';
+import { X, Plus, Eye, Save, Upload, ChevronDown, Search, ArrowRightCircle, Share, Edit2, Trash2, MessageCircle, Printer } from 'lucide-react';
 import axios from 'axios';
+import { generateTicketPDF } from '../utils/pdfGenerator';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCategories, useVendors, useTicket } from '../api/hooks';
+import envelopPdf from '../assets/Envelop.pdf';
 
 const LOCAL_FORMATS_KEY = 'rma-local-whatsapp-formats';
 
@@ -115,6 +117,21 @@ export default function TicketDetailsModal({
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [whatsAppTargetStage, setWhatsAppTargetStage] = useState('');
+  const [printingStage, setPrintingStage] = useState(null);
+
+  const handlePrint = async (stageName) => {
+    setPrintingStage(stageName);
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+      const res = await axios.get(`${baseUrl}/tickets/${service.id}`);
+      generateTicketPDF(stageName, res.data);
+    } catch(e) {
+      console.error("Failed to fetch full ticket details for print:", e);
+      generateTicketPDF(stageName, service);
+    } finally {
+      setPrintingStage(null);
+    }
+  };
   const [availableFormats, setAvailableFormats] = useState([]);
   const [selectedFormatName, setSelectedFormatName] = useState('');
   const hasWhatsAppFormats = availableFormats.length > 0;
@@ -256,7 +273,16 @@ export default function TicketDetailsModal({
         return;
       }
 
-      await handleSendWhatsAppReport(service, whatsAppMessage.trim(), targetPhone);
+      const fullTicketRes = await axios.get(`${baseUrl}/tickets/${service.id}`);
+      const payloadItem = { ...fullTicketRes.data, status: whatsAppTargetStage, customerName: fullTicketRes.data.name };
+      
+      await axios.post(`${baseUrl}/whatsapp/send-pdf`, { 
+        ticketData: payloadItem, 
+        message: whatsAppMessage.trim(),
+        targetPhone: targetPhone
+      });
+      
+      alert("WhatsApp message and PDF report sent successfully.");
       setWhatsAppFormatOpen(false);
     } catch (err) {
       console.error("Failed to check WhatsApp status or send message:", err);
@@ -621,7 +647,7 @@ export default function TicketDetailsModal({
                     </span>
                   </div>
                   
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'flex-end' }}>
                     {userRole === 'ADMIN' ? (
                       <>
                         {(() => {
@@ -635,111 +661,165 @@ export default function TicketDetailsModal({
                           
                           return (
                             <>
-                              <button
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isCustInwardEnabled ? '#ecfdf5' : '#f1f5f9', color: isCustInwardEnabled ? '#10b981' : '#94a3b8', border: `1px solid ${isCustInwardEnabled ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isCustInwardEnabled ? 'pointer' : 'not-allowed', opacity: isCustInwardEnabled ? 1 : 0.6 }}
-                                disabled={!isCustInwardEnabled}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openWhatsAppFormat('CUSTOMER INWARD');
-                                }}
-                                title={isCustInwardEnabled ? "Send WhatsApp Message for Customer Inward" : "Customer Inward"}
-                              >
-                                {isCustInwardEnabled ? <MessageCircle size={16} /> : null} Customer Inward
-                              </button>
-                              
-                              <button
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isVendOutwardEnabled ? '#ecfdf5' : '#f1f5f9', color: isVendOutwardEnabled ? '#10b981' : '#94a3b8', border: `1px solid ${isVendOutwardEnabled ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isVendOutwardEnabled ? 'pointer' : 'not-allowed', opacity: isVendOutwardEnabled ? 1 : 0.6 }}
-                                disabled={!isVendOutwardEnabled}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openWhatsAppFormat('VENDOR OUTWARD');
-                                }}
-                                title={isVendOutwardEnabled ? "Send WhatsApp Message for Vendor Outward" : "Vendor Outward"}
-                              >
-                                {isVendOutwardEnabled ? <MessageCircle size={16} /> : null} Vendor Outward
-                              </button>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                <button
+                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isCustInwardEnabled ? '#eff6ff' : '#f1f5f9', color: isCustInwardEnabled ? '#2563eb' : '#94a3b8', border: `1px solid ${isCustInwardEnabled ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isCustInwardEnabled ? 'pointer' : 'not-allowed', opacity: isCustInwardEnabled ? 1 : 0.6 }}
+                                  disabled={!isCustInwardEnabled}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openWhatsAppFormat('CUSTOMER INWARD');
+                                  }}
+                                  title={isCustInwardEnabled ? "Send WhatsApp Message for Customer Inward" : "Customer Inward"}
+                                >
+                                  {isCustInwardEnabled ? <MessageCircle size={16} /> : null} Customer Inward
+                                </button>
+                                
+                                <button
+                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isVendOutwardEnabled ? '#fffbeb' : '#f1f5f9', color: isVendOutwardEnabled ? '#d97706' : '#94a3b8', border: `1px solid ${isVendOutwardEnabled ? '#fde68a' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isVendOutwardEnabled ? 'pointer' : 'not-allowed', opacity: isVendOutwardEnabled ? 1 : 0.6 }}
+                                  disabled={!isVendOutwardEnabled}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openWhatsAppFormat('VENDOR OUTWARD');
+                                  }}
+                                  title={isVendOutwardEnabled ? "Send WhatsApp Message for Vendor Outward" : "Vendor Outward"}
+                                >
+                                  {isVendOutwardEnabled ? <MessageCircle size={16} /> : null} Vendor Outward
+                                </button>
 
-                              <button
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isVendInwardEnabled ? '#ecfdf5' : '#f1f5f9', color: isVendInwardEnabled ? '#10b981' : '#94a3b8', border: `1px solid ${isVendInwardEnabled ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isVendInwardEnabled ? 'pointer' : 'not-allowed', opacity: isVendInwardEnabled ? 1 : 0.6 }}
-                                disabled={!isVendInwardEnabled}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openWhatsAppFormat('VENDOR INWARD');
-                                }}
-                                title={isVendInwardEnabled ? "Send WhatsApp Message for Vendor Inward" : "Vendor Inward"}
-                              >
-                                {isVendInwardEnabled ? <MessageCircle size={16} /> : null} Vendor Inward
-                              </button>
+                                <button
+                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isVendInwardEnabled ? '#faf5ff' : '#f1f5f9', color: isVendInwardEnabled ? '#9333ea' : '#94a3b8', border: `1px solid ${isVendInwardEnabled ? '#e9d5ff' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isVendInwardEnabled ? 'pointer' : 'not-allowed', opacity: isVendInwardEnabled ? 1 : 0.6 }}
+                                  disabled={!isVendInwardEnabled}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openWhatsAppFormat('VENDOR INWARD');
+                                  }}
+                                  title={isVendInwardEnabled ? "Send WhatsApp Message for Vendor Inward" : "Vendor Inward"}
+                                >
+                                  {isVendInwardEnabled ? <MessageCircle size={16} /> : null} Vendor Inward
+                                </button>
 
-                              <button
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isCustOutwardEnabled ? '#ecfdf5' : '#f1f5f9', color: isCustOutwardEnabled ? '#10b981' : '#94a3b8', border: `1px solid ${isCustOutwardEnabled ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isCustOutwardEnabled ? 'pointer' : 'not-allowed', opacity: isCustOutwardEnabled ? 1 : 0.6 }}
-                                disabled={!isCustOutwardEnabled}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openWhatsAppFormat('CUSTOMER OUTWARD');
-                                }}
-                                title={isCustOutwardEnabled ? "Send WhatsApp Message for Customer Outward" : "Customer Outward"}
-                              >
-                                {isCustOutwardEnabled ? <MessageCircle size={16} /> : null} Customer Outward
-                              </button>
+                                <button
+                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isCustOutwardEnabled ? '#ecfdf5' : '#f1f5f9', color: isCustOutwardEnabled ? '#059669' : '#94a3b8', border: `1px solid ${isCustOutwardEnabled ? '#a7f3d0' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isCustOutwardEnabled ? 'pointer' : 'not-allowed', opacity: isCustOutwardEnabled ? 1 : 0.6 }}
+                                  disabled={!isCustOutwardEnabled}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openWhatsAppFormat('CUSTOMER OUTWARD');
+                                  }}
+                                  title={isCustOutwardEnabled ? "Send WhatsApp Message for Customer Outward" : "Customer Outward"}
+                                >
+                                  {isCustOutwardEnabled ? <MessageCircle size={16} /> : null} Customer Outward
+                                </button>
+
+                                {service.status === 'CUSTOMER OUTWARD' && (
+                                  <button
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#dcfce7', color: '#16a34a', border: '1px solid #86efac', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openWhatsAppFormat('COMPLETED');
+                                    }}
+                                    title="Open WhatsApp format"
+                                  >
+                                    <MessageCircle size={16} /> WhatsApp
+                                  </button>
+                                )}
+                                <button
+                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#fefce8', color: '#eab308', border: '1px solid #fef08a', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingServiceId(service.id);
+                                    setEditData({
+                                      productName: service.product,
+                                      category: service.category,
+                                      serviceVendor: service.serviceVendor,
+                                      serialNumber: service.serialNumber || '',
+                                      name: service.name,
+                                      contactNumber: service.contactNumber,
+                                      email: service.email || '',
+                                      description: service.description || '',
+                                      inwardImageURL: service.inwardImageURL || ''
+                                    });
+                                  }}
+                                >
+                                  <Edit2 size={16} /> Edit
+                                </button>
+                                <button
+                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteService(service.id);
+                                  }}
+                                >
+                                  <Trash2 size={16} /> Delete
+                                </button>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                <button
+                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isCustInwardEnabled ? '#eff6ff' : '#f1f5f9', color: isCustInwardEnabled ? '#2563eb' : '#94a3b8', border: `1px solid ${isCustInwardEnabled ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isCustInwardEnabled ? (printingStage === 'CUSTOMER INWARD' ? 'wait' : 'pointer') : 'not-allowed', opacity: isCustInwardEnabled ? 1 : 0.6 }}
+                                  disabled={!isCustInwardEnabled || printingStage === 'CUSTOMER INWARD'}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePrint('CUSTOMER INWARD');
+                                  }}
+                                >
+                                  <Printer size={16} /> Print Customer Inward
+                                </button>
+                                
+                                <button
+                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isVendOutwardEnabled ? '#fffbeb' : '#f1f5f9', color: isVendOutwardEnabled ? '#d97706' : '#94a3b8', border: `1px solid ${isVendOutwardEnabled ? '#fde68a' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isVendOutwardEnabled ? (printingStage === 'VENDOR OUTWARD' ? 'wait' : 'pointer') : 'not-allowed', opacity: isVendOutwardEnabled ? 1 : 0.6 }}
+                                  disabled={!isVendOutwardEnabled || printingStage === 'VENDOR OUTWARD'}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePrint('VENDOR OUTWARD');
+                                  }}
+                                >
+                                  <Printer size={16} /> Print Vendor Outward
+                                </button>
+
+                                <button
+                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isVendInwardEnabled ? '#faf5ff' : '#f1f5f9', color: isVendInwardEnabled ? '#9333ea' : '#94a3b8', border: `1px solid ${isVendInwardEnabled ? '#e9d5ff' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isVendInwardEnabled ? (printingStage === 'VENDOR INWARD' ? 'wait' : 'pointer') : 'not-allowed', opacity: isVendInwardEnabled ? 1 : 0.6 }}
+                                  disabled={!isVendInwardEnabled || printingStage === 'VENDOR INWARD'}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePrint('VENDOR INWARD');
+                                  }}
+                                >
+                                  <Printer size={16} /> Print Vendor Inward
+                                </button>
+
+                                <button
+                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isCustOutwardEnabled ? '#ecfdf5' : '#f1f5f9', color: isCustOutwardEnabled ? '#059669' : '#94a3b8', border: `1px solid ${isCustOutwardEnabled ? '#a7f3d0' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isCustOutwardEnabled ? (printingStage === 'FINAL RESOLUTION' ? 'wait' : 'pointer') : 'not-allowed', opacity: isCustOutwardEnabled ? 1 : 0.6 }}
+                                  disabled={!isCustOutwardEnabled || printingStage === 'FINAL RESOLUTION'}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePrint('FINAL RESOLUTION');
+                                  }}
+                                >
+                                  <Printer size={16} /> Print Customer Outward
+                                </button>
+
+                                <button
+                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f8fafc', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(envelopPdf, '_blank');
+                                  }}
+                                >
+                                  <Printer size={16} /> Customer Envelope
+                                </button>
+
+                                <button
+                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f8fafc', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(envelopPdf, '_blank');
+                                  }}
+                                >
+                                  <Printer size={16} /> Vendor Envelope
+                                </button>
+                              </div>
                             </>
                           );
                         })()}
-
-                        {(service.status === 'CUSTOMER OUTWARD' || service.status === 'COMPLETED') && (
-                          <>
-                            <button
-                              style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleGenerateReport(service);
-                              }}
-                            >
-                              <Share size={16} /> Generate Final Report
-                            </button>
-                            {service.status === 'CUSTOMER OUTWARD' && (
-                              <button
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#dcfce7', color: '#16a34a', border: '1px solid #86efac', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openWhatsAppFormat('COMPLETED');
-                                }}
-                                title="Open WhatsApp format"
-                              >
-                                <MessageCircle size={16} /> WhatsApp
-                              </button>
-                            )}
-                          </>
-                        )}
-                        <button
-                          style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#fefce8', color: '#eab308', border: '1px solid #fef08a', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingServiceId(service.id);
-                            setEditData({
-                              productName: service.product,
-                              category: service.category,
-                              serviceVendor: service.serviceVendor,
-                              serialNumber: service.serialNumber || '',
-                              name: service.name,
-                              contactNumber: service.contactNumber,
-                              email: service.email || '',
-                              description: service.description || '',
-                              inwardImageURL: service.inwardImageURL || ''
-                            });
-                          }}
-                        >
-                          <Edit2 size={16} /> Edit
-                        </button>
-                        <button
-                          style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteService(service.id);
-                          }}
-                        >
-                          <Trash2 size={16} /> Delete
-                        </button>
                       </>
                     ) : (
                       <span style={{ fontSize: '13px', color: '#94a3b8' }}>Admin actions restricted</span>
@@ -818,6 +898,26 @@ export default function TicketDetailsModal({
                     </select>
                     <ChevronDown size={16} color="#64748b" style={{ position: 'absolute', right: '12px', top: '12px', pointerEvents: 'none' }} />
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '24px', backgroundColor: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '10px', fontSize: '13px' }}>
+                <div style={{ fontWeight: 600, color: '#64748b' }}>Ticket No:</div>
+                <div style={{ fontWeight: 700, color: '#0f172a' }}>{service.rma}</div>
+                
+                <div style={{ fontWeight: 600, color: '#64748b' }}>Report PDF:</div>
+                <div style={{ fontWeight: 600, color: '#3b82f6', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Printer size={14} /> {service.rma}_Ticket.pdf
+                </div>
+                
+                <div style={{ fontWeight: 600, color: '#64748b' }}>Send To:</div>
+                <div style={{ fontWeight: 700, color: '#0f172a' }}>
+                  {whatsAppTargetStage === 'VENDOR OUTWARD' || whatsAppTargetStage === 'VENDOR INWARD' 
+                    ? `Vendor: ${service.serviceVendor} (${vendors.find(v => v.companyName === service.serviceVendor)?.phoneNumber || 'No Number'})`
+                    : `Customer: ${service.name} (${service.contactNumber || 'No Number'})`
+                  }
                 </div>
               </div>
             </div>
