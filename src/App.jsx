@@ -46,6 +46,7 @@ import TicketDetailsModal from './components/TicketDetailsModal';
 import WhatsAppSettings from './components/WhatsAppSettings';
 import CourierChargesTab from './components/CourierChargesTab';
 import WhatsAppMsgTab from './components/WhatsAppMsgTab';
+import logoImg from './assets/logo.png';
 
 // Initialize Axios default token if available in localStorage
 const initialToken = localStorage.getItem('token');
@@ -515,7 +516,7 @@ function App() {
         {/* Mobile Header */}
         <div className="mobile-header">
           <div className="brand" style={{ margin: 0 }}>
-            <div className="brand-logo">R</div>
+            <img src={logoImg} alt="Logo" className="brand-logo" style={{ background: 'none', objectFit: 'contain' }} />
             <span className="brand-title">RMA Flow</span>
           </div>
           <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(true)}>
@@ -531,7 +532,7 @@ function App() {
         {/* Sidebar */}
         <div className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
           <div className="brand">
-            <div className="brand-logo">R</div>
+            <img src={logoImg} alt="Logo" className="brand-logo" style={{ background: 'none', objectFit: 'contain' }} />
             <div>
               <div className="brand-title">AV XPERTS</div>
               <div className="brand-subtitle">Service Management</div>
