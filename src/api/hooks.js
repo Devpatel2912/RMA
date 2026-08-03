@@ -48,3 +48,25 @@ export const useVendors = () => {
     refetchOnWindowFocus: false,
   });
 };
+
+export const useProfile = () => {
+  return useQuery({
+    queryKey: ['profile'],
+    queryFn: async () => {
+      const res = await axios.get(`${baseUrl}/profile`);
+      return res.data;
+    },
+    refetchOnWindowFocus: false,
+  });
+};
+
+export const useEnvelope = () => {
+  return useQuery({
+    queryKey: ['envelope'],
+    queryFn: async () => {
+      const res = await axios.get(`${baseUrl}/envelope`);
+      return res.data;
+    },
+    refetchOnWindowFocus: false,
+  });
+};

@@ -18,7 +18,9 @@ import {
   Moon,
   Sun,
   X,
-  MessageSquare
+  MessageSquare,
+  User,
+  Mail
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTickets, useVendors } from './api/hooks';
@@ -35,7 +37,6 @@ import LoginPage from './landing/LoginPage';
 import './login.css';
 import './mobile.css';
 
-import DashboardTab from './components/DashboardTab';
 import WorkflowTab from './components/WorkflowTab';
 
 import ManageCategoriesTab from './components/ManageCategoriesTab';
@@ -46,6 +47,8 @@ import TicketDetailsModal from './components/TicketDetailsModal';
 import WhatsAppSettings from './components/WhatsAppSettings';
 import CourierChargesTab from './components/CourierChargesTab';
 import WhatsAppMsgTab from './components/WhatsAppMsgTab';
+import ProfileTab from './components/ProfileTab';
+import EnvelopeTab from './components/EnvelopeTab';
 import logoImg from './assets/logo.png';
 
 // Initialize Axios default token if available in localStorage
@@ -63,7 +66,7 @@ function App() {
 
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('workflow');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [advancingItem, setAdvancingItem] = useState(null);
   const [viewingItem, setViewingItem] = useState(null);
@@ -181,13 +184,13 @@ function App() {
   };
 
   const handleSaveInward = () => {
-    if (!formData.customerName || !formData.contactNumber || !formData.productName || !formData.category || !formData.serviceVendor || !formData.description || !formData.inwardDate || !formData.images || formData.images.length === 0) {
+    if (!formData.customerName || !formData.contactNumber || !formData.productName || !formData.category || !formData.description || !formData.inwardDate || !formData.images || formData.images.length === 0) {
       alert("Please fill out all required fields and add at least one image. Serial Number and Email are optional.");
       return;
     }
 
     const newId = Math.floor(Math.random() * 100).toString() + Date.now().toString().slice(-4);
-    const newRma = formData.rma || `RMA-${Math.floor(100000 + Math.random() * 900000)}`;
+    const newRma = formData.rma || `AV-${Math.floor(100000 + Math.random() * 900000)}`;
 
     let dateStr = "";
     if (formData.inwardDate) {
@@ -215,7 +218,7 @@ function App() {
           date: dateStr,
           description: formData.description,
           category: formData.category,
-          serviceVendor: formData.serviceVendor,
+          serviceVendor: formData.serviceVendor || 'Unassigned',
           inwardImageURL: imgData
         });
 
@@ -233,7 +236,7 @@ function App() {
           date: serverTicket.date,
           description: serverTicket.description,
           category: formData.category,
-          serviceVendor: formData.serviceVendor,
+          serviceVendor: formData.serviceVendor || 'Unassigned',
           inwardImageURL: serverTicket.inwardImageURL,
           statusClass: "bg-blue-light"
         };
@@ -252,7 +255,7 @@ function App() {
           email: '',
           productName: '',
           category: 'Motherboard',
-          serviceVendor: 'ASUS Service',
+          serviceVendor: '',
           serialNumber: '',
           description: '',
           images: [],
@@ -501,13 +504,14 @@ function App() {
 
   const renderDashboard = () => {
     const navItems = [
-      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { id: 'workflow', label: 'Workflow', icon: Workflow },
       { id: 'categories', label: 'Categories', icon: Package },
       { id: 'vendors', label: 'Vendors', icon: Building2 },
       ...(userRole === 'ADMIN' ? [{ id: 'whatsapp', label: 'WhatsApp Setup', icon: Smartphone }] : []),
       { id: 'whatsapp-msg', label: 'WhatsApp Msg', icon: MessageSquare },
       { id: 'courier-charges', label: 'Courier Charges', icon: Truck },
+      { id: 'profile', label: 'Profile', icon: User },
+      { id: 'messages', label: 'Envelope', icon: Mail },
     ];
 
     return (
@@ -594,13 +598,6 @@ function App() {
 
           {/* Main Content Scrollable Area */}
           <div className="main-content">
-            {activeTab === 'dashboard' && (
-              <DashboardTab
-                handleExportData={handleExportData}
-                setViewingItem={setViewingItem}
-              />
-            )}
-
             {activeTab === 'workflow' && (
               <WorkflowTab
                 recentActivities={recentActivities}
@@ -635,6 +632,14 @@ function App() {
 
             {activeTab === 'courier-charges' && (
               <CourierChargesTab recentActivities={recentActivities} />
+            )}
+
+            {activeTab === 'profile' && (
+              <ProfileTab />
+            )}
+
+            {activeTab === 'messages' && (
+              <EnvelopeTab />
             )}
           </div>
 

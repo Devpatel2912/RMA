@@ -48,13 +48,6 @@ export default function LoginPage({ setIsLoggedIn, setUserRole }) {
       <div className="login-background-pattern"></div>
       <div className="login-box" style={{ position: 'relative', zIndex: 10 }}>
         
-        {/* Back button */}
-        <button 
-          onClick={() => navigate('/')} 
-          style={{ position: 'absolute', top: '16px', left: '16px', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
-        >
-          &larr; Back to Home
-        </button>
 
         <div className="login-header" style={{ marginTop: '20px' }}>
           <div className="login-logo">R</div>

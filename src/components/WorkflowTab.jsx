@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, ArrowRightCircle, Share, Eye, Printer, Loader2, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { Search, ArrowRightCircle, Share, Eye, Printer, Loader2, SlidersHorizontal, Trash2, ClipboardList, Package, Truck, UserCheck } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useTickets } from '../api/hooks';
@@ -127,8 +127,33 @@ export default function WorkflowTab({
     return null;
   }).filter(Boolean)));
 
+  const STAT_CONFIG = [
+    { label: 'CUSTOMER INWARD', key: 'CUSTOMER INWARD', icon: ClipboardList, iconBg: '#ECFDF5', iconColor: '#059669', indicatorColor: '#10B981' },
+    { label: 'SENT TO VENDOR', key: 'VENDOR OUTWARD', icon: Truck, iconBg: '#FFFBEB', iconColor: '#D97706', indicatorColor: '#F59E0B' },
+    { label: 'AT VENDOR', key: 'VENDOR INWARD', icon: Package, iconBg: '#F5F3FF', iconColor: '#7C3AED', indicatorColor: '#8B5CF6' },
+    { label: 'READY FOR CUSTOMER', key: 'CUSTOMER OUTWARD', icon: UserCheck, iconBg: '#ECFDF5', iconColor: '#059669', indicatorColor: '#10B981' },
+  ];
+
   return (
     <>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        {STAT_CONFIG.map(({ label, key, icon: Icon, iconBg, iconColor, indicatorColor }) => {
+          const count = recentActivities.filter(a => a.status === key).length;
+          return (
+            <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
+                <div style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', lineHeight: 1 }}>{count}</div>
+                <div style={{ height: '3px', width: '30px', backgroundColor: indicatorColor, marginTop: '8px', borderRadius: '2px' }} />
+              </div>
+              <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon size={18} color={iconColor} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {/* ── Header ── */}
       <div className="workflow-header">
         <div className="header-text">

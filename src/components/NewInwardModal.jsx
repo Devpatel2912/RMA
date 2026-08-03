@@ -124,7 +124,7 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
   const vendorNames = vendors.map(v => v.companyName);
 
   // Generate a preview RMA number
-  const previewRma = formData.rma || `RMA-${Math.floor(100000 + Math.random() * 900000).toString().slice(0, 6)}`;
+  const previewRma = formData.rma || `AV-${Math.floor(100000 + Math.random() * 900000).toString().slice(0, 6)}`;
 
   const inputStyle = {
     display: 'flex', alignItems: 'center', gap: 10,
@@ -509,16 +509,7 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
                   />
                 </Field>
 
-                {/* Service Vendor */}
-                <Field label="Service Vendor *">
-                  <SearchableDropdown
-                    icon={Building2}
-                    options={vendorNames}
-                    value={formData.serviceVendor}
-                    onChange={val => setFormData(prev => ({ ...prev, serviceVendor: val }))}
-                    placeholder="Assign Vendor"
-                  />
-                </Field>
+
 
                 <div style={{ gridColumn: '1 / -1' }}>
                   <Field label="Detailed Problem Description *">

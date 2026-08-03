@@ -797,25 +797,7 @@ export default function TicketDetailsModal({
                                   <Printer size={16} /> Print Customer Outward
                                 </button>
 
-                                <button
-                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f8fafc', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(envelopPdf, '_blank');
-                                  }}
-                                >
-                                  <Printer size={16} /> Customer Envelope
-                                </button>
 
-                                <button
-                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f8fafc', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(envelopPdf, '_blank');
-                                  }}
-                                >
-                                  <Printer size={16} /> Vendor Envelope
-                                </button>
                               </div>
                             </>
                           );

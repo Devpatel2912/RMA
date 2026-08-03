@@ -32,7 +32,7 @@ export default function ManageVendorsTab({ userRole }) {
     if (!formData.address.trim()) { alert('Address is required'); return; }
     if (!formData.phoneNumber.trim()) { alert('Phone Number is required'); return; }
     if (!formData.email.trim()) { alert('Email is required'); return; }
-    if (!formData.panNumber?.trim()) { alert('PAN Number is required'); return; }
+
     setIsSaving(true);
     try {
       if (editingId) {
@@ -283,7 +283,7 @@ export default function ManageVendorsTab({ userRole }) {
                 </div>
               </div>
               <div className="form-group" style={{ marginTop: 16 }}>
-                <label className="form-label">PAN Number *</label>
+                <label className="form-label">PAN Number</label>
                 <input type="text" className="form-input" name="panNumber" value={formData.panNumber || ''} onChange={(e) => handleInputChange({ target: { name: 'panNumber', value: e.target.value.toUpperCase() } })} placeholder="ABCDE1234F" maxLength="10" />
               </div>
             </div>

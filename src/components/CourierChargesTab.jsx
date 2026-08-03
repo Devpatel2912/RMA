@@ -3,20 +3,63 @@ import { Truck, Search, Package } from 'lucide-react';
 
 const CourierChargesTab = ({ recentActivities }) => {
   const [searchTerm, setSearchTerm] = useState('');
-
+  const [filterMonth, setFilterMonth] = useState('All');
+  const [filterYear, setFilterYear] = useState('All');
   const ticketsWithCharges = recentActivities.filter((ticket) => {
     if (!ticket.courierCharge) return false;
     const chargeStr = ticket.courierCharge.toString().trim();
     return chargeStr !== '' && chargeStr !== '0';
   });
 
+  const uniqueYears = Array.from(new Set(recentActivities.map(a => {
+    if (!a.date) return null;
+    if (a.date.includes('-')) return a.date.split('-')[0];
+    if (a.date.includes('/')) return a.date.split('/')[2];
+    return null;
+  }).filter(Boolean)));
+
   const filteredTickets = ticketsWithCharges.filter(ticket => {
     const term = searchTerm.toLowerCase();
-    return (
-      ticket.rma.toLowerCase().includes(term) ||
+    const matchesSearch = ticket.rma.toLowerCase().includes(term) ||
       ticket.name?.toLowerCase().includes(term) ||
-      ticket.customerName?.toLowerCase().includes(term)
-    );
+      ticket.customerName?.toLowerCase().includes(term);
+
+    let matchesMonth = true;
+    let matchesYear = true;
+    
+    if (ticket.date) {
+      let month = '';
+      let year = '';
+      if (ticket.date.includes('-')) {
+        const parts = ticket.date.split('-');
+        year = parts[0];
+        month = parts[1];
+      } else if (ticket.date.includes('/')) {
+        const parts = ticket.date.split('/');
+        month = parts[1];
+        year = parts[2];
+      }
+
+      if (month) {
+        const paddedMonth = month.padStart(2, '0');
+        if (filterMonth !== 'All' && filterMonth !== paddedMonth) matchesMonth = false;
+      } else {
+        if (filterMonth !== 'All') matchesMonth = false;
+      }
+
+      if (year) {
+        if (filterYear !== 'All' && filterYear !== year) matchesYear = false;
+      } else {
+        if (filterYear !== 'All') matchesYear = false;
+      }
+    } else {
+      if (filterMonth !== 'All' || filterYear !== 'All') {
+        matchesMonth = false;
+        matchesYear = false;
+      }
+    }
+
+    return matchesSearch && matchesMonth && matchesYear;
   });
 
   const totalCharge = filteredTickets.reduce((sum, t) => {
@@ -78,11 +121,11 @@ const CourierChargesTab = ({ recentActivities }) => {
         boxShadow: 'none',
       }}>
 
-        {/* Search + count bar */}
+        {/* Search + Filters bar */}
         <div style={{
           padding: '14px 20px', borderBottom: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: 12, background: 'var(--surface-hover)',
+          flexWrap: 'wrap', gap: 12, background: 'var(--surface-hover)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Truck size={15} color="var(--primary)" />
@@ -95,23 +138,74 @@ const CourierChargesTab = ({ recentActivities }) => {
             </span>
           </div>
 
-          <div style={{ position: 'relative' }}>
-            <Search size={13} color="var(--text-muted)" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-            <input
-              type="text"
-              placeholder="Search RMA or customer..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <select
+              value={filterMonth}
+              onChange={(e) => setFilterMonth(e.target.value)}
               style={{
-                padding: '7px 12px 7px 30px', fontSize: 13,
-                border: '1.5px solid var(--border)', borderRadius: 8,
-                outline: 'none', background: 'var(--surface)',
-                color: 'var(--text-primary)', width: 200,
-                fontFamily: 'Inter, sans-serif', transition: 'border-color 0.18s',
+                padding: '6px 10px', fontSize: 13, border: '1.5px solid var(--border)',
+                borderRadius: 8, outline: 'none', background: 'var(--surface)', color: 'var(--text-primary)',
+                fontFamily: 'Inter, sans-serif'
               }}
-              onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-              onBlur={e => e.target.style.borderColor = 'var(--border)'}
-            />
+            >
+              <option value="All">All Months</option>
+              {['01','02','03','04','05','06','07','08','09','10','11','12'].map(m => (
+                <option key={m} value={m}>{new Date(2000, parseInt(m) - 1, 1).toLocaleString('default', { month: 'short' })}</option>
+              ))}
+            </select>
+
+            <select
+              value={filterYear}
+              onChange={(e) => setFilterYear(e.target.value)}
+              style={{
+                padding: '6px 10px', fontSize: 13, border: '1.5px solid var(--border)',
+                borderRadius: 8, outline: 'none', background: 'var(--surface)', color: 'var(--text-primary)',
+                fontFamily: 'Inter, sans-serif'
+              }}
+            >
+              <option value="All">All Years</option>
+              {uniqueYears.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+
+            {(filterMonth !== 'All' || filterYear !== 'All' || searchTerm) && (
+              <button
+                onClick={() => {
+                  setFilterMonth('All');
+                  setFilterYear('All');
+                  setSearchTerm('');
+                }}
+                style={{
+                  padding: '6px 12px', fontSize: 12, background: 'var(--surface)',
+                  color: 'var(--text-muted)', border: '1px solid var(--border)',
+                  borderRadius: 6, cursor: 'pointer', fontWeight: 600
+                }}
+                onMouseEnter={e => { e.target.style.background = 'var(--surface-hover)'; e.target.style.color = 'var(--text-primary)'; }}
+                onMouseLeave={e => { e.target.style.background = 'var(--surface)'; e.target.style.color = 'var(--text-muted)'; }}
+              >
+                Clear
+              </button>
+            )}
+
+            <div style={{ position: 'relative' }}>
+              <Search size={13} color="var(--text-muted)" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+              <input
+                type="text"
+                placeholder="Search RMA..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                style={{
+                  padding: '7px 12px 7px 30px', fontSize: 13,
+                  border: '1.5px solid var(--border)', borderRadius: 8,
+                  outline: 'none', background: 'var(--surface)',
+                  color: 'var(--text-primary)', width: 150,
+                  fontFamily: 'Inter, sans-serif', transition: 'border-color 0.18s',
+                }}
+                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
+            </div>
           </div>
         </div>
 
