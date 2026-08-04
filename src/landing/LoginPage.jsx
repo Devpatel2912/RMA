@@ -17,18 +17,18 @@ export default function LoginPage({ setIsLoggedIn, setUserRole }) {
     setIsLoggingIn(true);
     const email = e.target.email.value.trim();
     const password = e.target.password.value;
-    
+
     try {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
       const res = await axios.post(`${baseUrl}/auth/login`, { email, password });
-      
+
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('userRole', res.data.user.role);
       axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-      
+
       setUserRole(res.data.user.role);
       setIsLoggedIn(true);
-      
+
       // Redirect to the dashboard
       navigate('/admin-panel');
     } catch (err) {
@@ -47,13 +47,13 @@ export default function LoginPage({ setIsLoggedIn, setUserRole }) {
     <div className="login-container">
       <div className="login-background-pattern"></div>
       <div className="login-box" style={{ position: 'relative', zIndex: 10 }}>
-        
+
 
         <div className="login-header" style={{ marginTop: '20px' }}>
           <div className="login-logo">R</div>
           <div className="login-title-group">
             <h1 className="login-title">Admin Portal</h1>
-            <p className="login-subtitle">Sign in to your RMA Flow account</p>
+            <p className="login-subtitle">Sign in to your Avxperts Flow account</p>
           </div>
         </div>
 
@@ -71,16 +71,16 @@ export default function LoginPage({ setIsLoggedIn, setUserRole }) {
           <div className="login-input-group">
             <label>Password</label>
             <div style={{ position: 'relative' }}>
-              <input 
-                type={showPassword ? "text" : "password"} 
+              <input
+                type={showPassword ? "text" : "password"}
                 name="password"
-                className="login-input" 
-                placeholder="••••••••" 
-                required 
+                className="login-input"
+                placeholder="••••••••"
+                required
                 style={{ paddingRight: '44px' }}
               />
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
               >
@@ -95,7 +95,7 @@ export default function LoginPage({ setIsLoggedIn, setUserRole }) {
         </form>
 
         <p style={{ textAlign: 'center', fontSize: '12px', color: '#334155', marginTop: '-8px' }}>
-          RMA Flow · Powered by Avxperts
+          AV XPERTS Flow · Powered by Avxperts
         </p>
       </div>
     </div>
