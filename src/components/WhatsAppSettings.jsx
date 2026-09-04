@@ -92,7 +92,7 @@ export default function WhatsAppSettings() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{
             width: 44, height: 44, borderRadius: 12,
-            background: 'linear-gradient(135deg, #22C55E, #16A34A)',
+            background: 'var(--primary)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: 'none',
           }}>
@@ -164,13 +164,13 @@ export default function WhatsAppSettings() {
                 style={{
                   background: loading || !phoneNumber
                     ? 'var(--border)'
-                    : 'linear-gradient(135deg, #22C55E, #16A34A)',
+                    : 'var(--primary)',
                   color: loading || !phoneNumber ? 'var(--text-muted)' : 'white',
                   padding: '12px 20px', borderRadius: 'var(--radius-sm)',
                   border: 'none', fontSize: 14, fontWeight: 700,
                   cursor: loading || !phoneNumber ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-                  boxShadow: loading || !phoneNumber ? 'none' : '0 4px 14px rgba(34,197,94,0.35)',
+                  boxShadow: 'none',
                   transition: 'all 0.2s', fontFamily: 'Inter, sans-serif',
                   opacity: loading || !phoneNumber ? 0.6 : 1,
                 }}

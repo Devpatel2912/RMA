@@ -1,13 +1,17 @@
 import jsPDF from 'jspdf';
 
 export const generateEnvelopePDF = (toEnvelope, fromProfile) => {
-  // Standard DL Envelope: 220 x 110 mm, landscape
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'dl' });
+  // #9 Envelope: 8.875 x 3.875 in (225.425 x 98.425 mm), landscape
+  const doc = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: [225.425, 98.425],
+  });
   
   // Set default font
   doc.setFont('helvetica');
 
-  const startY = 20;
+  const startY = 18;
 
   // 1. "From" Section (Left)
   doc.setFontSize(10);
@@ -43,7 +47,7 @@ export const generateEnvelopePDF = (toEnvelope, fromProfile) => {
   // 2. "To" Section (Right)
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  const toStartX = 115;
+  const toStartX = 118;
   let toStartY = startY;
   doc.text('TO:', toStartX, toStartY);
   
@@ -67,6 +71,8 @@ export const generateEnvelopePDF = (toEnvelope, fromProfile) => {
     doc.text(`Mo: ${toEnvelope.phoneNumber}`, toStartX, toStartY);
   }
 
-  // Open the PDF in a new tab
+  doc.autoPrint();
+
+  // Open the #9 envelope PDF in a new tab
   window.open(doc.output('bloburl'), '_blank');
 };

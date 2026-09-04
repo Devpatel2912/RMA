@@ -20,7 +20,9 @@ import {
   X,
   MessageSquare,
   User,
-  Mail
+  Mail,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTickets, useVendors } from './api/hooks';
@@ -64,8 +66,8 @@ function App() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
 
-
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('workflow');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [advancingItem, setAdvancingItem] = useState(null);
@@ -103,8 +105,13 @@ function App() {
   // Form State
   const [formData, setFormData] = useState({
     customerName: '',
+    customerAddress: '',
     contactNumber: '',
     email: '',
+    country: null,
+    state: null,
+    city: null,
+    pincode: '',
     productName: '',
     category: '',
     serviceVendor: '',
@@ -184,8 +191,8 @@ function App() {
   };
 
   const handleSaveInward = () => {
-    if (!formData.customerName || !formData.contactNumber || !formData.productName || !formData.category || !formData.description || !formData.inwardDate || !formData.images || formData.images.length === 0) {
-      alert("Please fill out all required fields and add at least one image. Serial Number and Email are optional.");
+    if (!formData.customerName || !formData.customerAddress || !formData.contactNumber || !formData.productName || !formData.category || !formData.description || !formData.inwardDate || !formData.pincode || !formData.images || formData.images.length === 0) {
+      alert("Please fill out all required fields including customer address, pincode, and at least one image. Serial Number and Email are optional.");
       return;
     }
 
@@ -204,12 +211,20 @@ function App() {
     const finalizeSave = async (imgData = null) => {
       setIsSaving(true);
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+      const composedAddress = [
+        formData.customerAddress,
+        formData.city?.label,
+        formData.state?.label,
+        formData.country?.label,
+        formData.pincode,
+      ].filter(Boolean).join(', ');
 
       try {
         const res = await axios.post(`${baseUrl}/tickets`, {
           rma: newRma,
           customerName: formData.customerName,
-          customerAddress: formData.customerAddress,
+          customerAddress: composedAddress,
+          pincode: formData.pincode,
           contactNumber: formData.contactNumber,
           email: formData.email,
           product: formData.productName,
@@ -228,6 +243,7 @@ function App() {
           rma: serverTicket.rma,
           name: serverTicket.customerName,
           customerAddress: serverTicket.customerAddress,
+          pincode: serverTicket.pincode || formData.pincode,
           contactNumber: serverTicket.contactNumber,
           email: serverTicket.email,
           product: serverTicket.product,
@@ -404,7 +420,7 @@ function App() {
       const fullItem = res.data;
 
       // 1. Generate and download/print the highly-styled PDF using the full item
-      generateTicketPDF('COMPLETED', fullItem);
+      await generateTicketPDF('COMPLETED', fullItem);
 
       // 2. Only mark as completed and send WhatsApp if it's not already completed
       if (item.status !== 'COMPLETED') {
@@ -534,12 +550,20 @@ function App() {
         )}
 
         {/* Sidebar */}
-        <div className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-          <div className="brand">
-            <img src={logoImg} alt="Logo" className="brand-logo" style={{ background: 'none', objectFit: 'contain' }} />
-            <div>
-              <div className="brand-title">AV XPERTS</div>
-              <div className="brand-subtitle">Service Management</div>
+        <div className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''} ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+          <div className="brand" style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start' }}>
+            <div 
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              title="Toggle Sidebar"
+            >
+              <img src={logoImg} alt="Logo" className="brand-logo" style={{ background: 'none', objectFit: 'contain' }} />
+              {!isSidebarCollapsed && (
+                <div>
+                  <div className="brand-title">AV XPERTS</div>
+                  <div className="brand-subtitle">Service Management</div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -557,11 +581,16 @@ function App() {
           </div>
 
           <button className="new-inward-btn" onClick={() => {
-            setFormData({
-              customerName: '',
-              contactNumber: '',
-              email: '',
-              productName: '',
+          setFormData({
+            customerName: '',
+            customerAddress: '',
+            contactNumber: '',
+            email: '',
+            country: null,
+            state: null,
+            city: null,
+            pincode: '',
+            productName: '',
               category: '',
               serviceVendor: '',
               serialNumber: '',
@@ -655,10 +684,6 @@ function App() {
             </div>
 
             <div className="status-right">
-              <span>VO: <strong>{recentActivities.filter(a => a.status === 'VENDOR OUTWARD').length}</strong></span>
-              <span>VI: <strong>{recentActivities.filter(a => a.status === 'VENDOR INWARD').length}</strong></span>
-              <span>CO: <strong>{recentActivities.filter(a => a.status === 'CUSTOMER OUTWARD').length}</strong></span>
-              <div className="status-divider"></div>
               <span>{currentTime}</span>
             </div>
           </div>

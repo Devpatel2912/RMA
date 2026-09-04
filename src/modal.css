@@ -134,10 +134,23 @@
 }
 
 .form-input,
-.form-select,
+.form-select {
+  width: 100%;
+  padding: 11px 18px !important;
+  border: 1.5px solid var(--border, #E2E8F0) !important;
+  border-radius: var(--radius-full, 9999px) !important;
+  font-size: 14px;
+  color: var(--text-primary, #0F172A);
+  outline: none;
+  transition: all 0.18s ease;
+  background-color: var(--surface-hover, #F8FAFC);
+  font-family: 'Inter', sans-serif;
+  line-height: 1.5;
+}
+
 .form-textarea {
   width: 100%;
-  padding: 10px 14px;
+  padding: 11px 16px;
   border: 1.5px solid var(--border, #E2E8F0);
   border-radius: var(--radius-sm, 8px);
   font-size: 14px;
@@ -152,7 +165,7 @@
 .form-input:focus,
 .form-select:focus,
 .form-textarea:focus {
-  border-color: var(--primary, #047857);
+  border-color: var(--primary, #000000);
   background-color: var(--surface, #FFFFFF);
   box-shadow: none;
 }
@@ -160,6 +173,12 @@
 .form-input::placeholder,
 .form-textarea::placeholder {
   color: var(--text-muted, #94A3B8);
+}
+
+input.new-inward-input-with-icon[type="text"],
+input.new-inward-input-with-icon[type="email"] {
+  padding-left: 44px !important;
+  padding-right: 16px !important;
 }
 
 .form-textarea {
@@ -214,7 +233,7 @@
 .btn-save {
   flex: 1;
   padding: 11px 16px;
-  background: linear-gradient(135deg, var(--primary, #047857) 0%, #065f46 100%);
+  background: var(--primary);
   border: none;
   border-radius: var(--radius-sm, 8px);
   font-weight: 700;
@@ -231,7 +250,7 @@
 }
 
 .btn-save:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--primary-hover, #065f46) 0%, #064e3b 100%);
+  background: #222222;
   box-shadow: none;
   transform: translateY(-1px);
 }

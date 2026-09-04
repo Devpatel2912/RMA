@@ -5,6 +5,7 @@ import { generateTicketPDF } from '../utils/pdfGenerator';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCategories, useVendors, useTicket } from '../api/hooks';
 import envelopPdf from '../assets/Envelop.pdf';
+import CustomDropdown from './CustomDropdown';
 
 const LOCAL_FORMATS_KEY = 'rma-local-whatsapp-formats';
 
@@ -24,6 +25,31 @@ const getLocalWhatsAppFormats = () => {
     return [];
   }
 };
+
+const resolveTicketImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('data:')) return url;
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+  const rootUrl = baseUrl.replace(/\/api$/, '');
+  const normalizedPath = url.replace(/\\/g, '/');
+  return `${rootUrl}/${normalizedPath.startsWith('/') ? normalizedPath.slice(1) : normalizedPath}`;
+};
+
+const parseTicketImageField = (field) => {
+  if (!field) return [];
+  try {
+    const parsed = JSON.parse(field);
+    return Array.isArray(parsed) ? parsed : [field];
+  } catch {
+    return [field];
+  }
+};
+
+const getTicketImageGroups = (ticket) => [
+  { title: 'Inward Images', images: parseTicketImageField(ticket.inwardImageURL) },
+  { title: 'Vendor Inward Images', images: parseTicketImageField(ticket.vendorInwardImageURL) },
+  { title: 'Outward Images', images: parseTicketImageField(ticket.outwardImageURL) },
+].filter(group => group.images.length > 0);
 
 const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -124,10 +150,10 @@ export default function TicketDetailsModal({
     try {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
       const res = await axios.get(`${baseUrl}/tickets/${service.id}`);
-      generateTicketPDF(stageName, res.data);
+      await generateTicketPDF(stageName, res.data);
     } catch(e) {
       console.error("Failed to fetch full ticket details for print:", e);
-      generateTicketPDF(stageName, service);
+      await generateTicketPDF(stageName, service);
     } finally {
       setPrintingStage(null);
     }
@@ -588,52 +614,42 @@ export default function TicketDetailsModal({
                   </div>
                 </div>
 
-                {/* Inward Image — shown prominently */}
+                {/* Images shown prominently */}
                 {(() => {
-                  let images = [];
-                  if (service.inwardImageURL) {
-                    try {
-                      images = JSON.parse(service.inwardImageURL);
-                      if (!Array.isArray(images)) images = [service.inwardImageURL];
-                    } catch (e) {
-                      images = [service.inwardImageURL];
-                    }
-                  }
-                  
-                  if (images.length === 0) return null;
-
-                  const getFullUrl = (url) => {
-                    if (!url) return '';
-                    if (url.startsWith('http') || url.startsWith('data:')) return url;
-                    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
-                    const rootUrl = baseUrl.replace(/\/api$/, '');
-                    const normalizedPath = url.replace(/\\/g, '/');
-                    return `${rootUrl}/${normalizedPath.startsWith('/') ? normalizedPath.slice(1) : normalizedPath}`;
-                  };
+                  const imageGroups = getTicketImageGroups(service);
+                  if (imageGroups.length === 0) return null;
 
                   return (
                     <div style={{ marginBottom: '20px' }}>
-                      <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '10px' }}>
-                        Inward Image{images.length > 1 ? 's' : ''}
-                      </div>
-                      <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px' }}>
-                        {images.map((imgUrl, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() => setPreviewImage(getFullUrl(imgUrl))}
-                            style={{ flexShrink: 0, cursor: 'zoom-in', display: 'inline-block', borderRadius: '10px', overflow: 'hidden', border: '2px solid #e2e8f0', boxShadow: 'none', transition: 'box-shadow 0.2s' }}
-                            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(16,185,129,0.25)'}
-                            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'}
-                            title="Click to view full size"
-                          >
-                            <img
-                              src={getFullUrl(imgUrl)}
-                              alt={`Inward ${idx + 1}`}
-                              style={{ maxHeight: '160px', maxWidth: '100%', display: 'block', objectFit: 'contain' }}
-                            />
+                      {imageGroups.map((group) => (
+                        <div key={group.title} style={{ marginBottom: '14px' }}>
+                          <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '10px' }}>
+                            {group.title}
                           </div>
-                        ))}
-                      </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px' }}>
+                            {group.images.map((imgUrl, idx) => {
+                              const fullUrl = resolveTicketImageUrl(imgUrl);
+                              return (
+                                <button
+                                  key={`${group.title}-${idx}`}
+                                  type="button"
+                                  onClick={() => setPreviewImage(fullUrl)}
+                                  style={{ cursor: 'zoom-in', borderRadius: '10px', overflow: 'hidden', border: '2px solid #e2e8f0', boxShadow: 'none', transition: 'box-shadow 0.2s', background: '#f8fafc', padding: 0, height: '150px' }}
+                                  onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(16,185,129,0.25)'}
+                                  onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+                                  title="Click to view full size"
+                                >
+                                  <img
+                                    src={fullUrl}
+                                    alt={`${group.title} ${idx + 1}`}
+                                    style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain' }}
+                                  />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
                       <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>Click image to view full size</div>
                     </div>
                   );
@@ -842,14 +858,13 @@ export default function TicketDetailsModal({
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>STAGE</label>
                 <div style={{ position: 'relative' }}>
-                  <select 
-                    style={{ width: '100%', height: '40px', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0 12px', background: 'white', color: '#0f172a', fontSize: '14px', appearance: 'none', cursor: 'not-allowed' }}
+                  <CustomDropdown
                     value={whatsAppTargetStage}
-                    disabled
-                  >
-                    <option value={whatsAppTargetStage}>{whatsAppTargetStage}</option>
-                  </select>
-                  <ChevronDown size={16} color="#64748b" style={{ position: 'absolute', right: '12px', top: '12px', pointerEvents: 'none' }} />
+                    onChange={() => {}}
+                    disabled={true}
+                    options={[{ value: whatsAppTargetStage, label: whatsAppTargetStage }]}
+                    style={{ width: '100%' }}
+                  />
                 </div>
               </div>
               
@@ -857,28 +872,22 @@ export default function TicketDetailsModal({
                 <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>FORMAT</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <div style={{ position: 'relative', flex: 1 }}>
-                    <select 
-                      style={{ width: '100%', height: '40px', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0 12px', background: hasWhatsAppFormats ? 'white' : '#f8fafc', color: hasWhatsAppFormats ? '#0f172a' : '#94a3b8', fontSize: '14px', appearance: 'none', cursor: hasWhatsAppFormats ? 'pointer' : 'not-allowed' }}
+                    <CustomDropdown
                       value={selectedFormatName}
-                      disabled={!hasWhatsAppFormats}
-                      onChange={(e) => {
-                        const newFormatName = e.target.value;
-                        setSelectedFormatName(newFormatName);
-                        const format = availableFormats.find(f => f.name === newFormatName);
+                      onChange={(val) => {
+                        setSelectedFormatName(val);
+                        const format = availableFormats.find(f => f.name === val);
                         if (format) {
                           setWhatsAppMessage(format.message);
                         }
                       }}
-                    >
-                      {hasWhatsAppFormats ? (
-                        availableFormats.map(format => (
-                          <option key={format.name} value={format.name}>{format.name}</option>
-                        ))
-                      ) : (
-                        <option value="">No format added in this stage</option>
-                      )}
-                    </select>
-                    <ChevronDown size={16} color="#64748b" style={{ position: 'absolute', right: '12px', top: '12px', pointerEvents: 'none' }} />
+                      disabled={!hasWhatsAppFormats}
+                      options={[
+                        ...(!hasWhatsAppFormats ? [{ value: '', label: 'No format available' }] : []),
+                        ...(availableFormats || []).map((format) => ({ value: format.name, label: format.name }))
+                      ]}
+                      style={{ width: '100%' }}
+                    />
                   </div>
                 </div>
               </div>

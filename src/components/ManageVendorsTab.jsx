@@ -8,7 +8,7 @@ import Spinner, { SkeletonLoader } from './Spinner';
 const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
 
 const VENDOR_COLORS = [
-  '#10b981', '#22C55E', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4', '#EF4444', '#10B981',
+  '#000000', '#111827', '#374151', '#4B5563', '#000000', '#111827', '#374151', '#4B5563',
 ];
 
 export default function ManageVendorsTab({ userRole }) {
@@ -29,6 +29,7 @@ export default function ManageVendorsTab({ userRole }) {
 
   const handleSave = async () => {
     if (!formData.companyName.trim()) { alert('Company Name is required'); return; }
+    if (formData.companyName.trim().toLowerCase() === 'unassigned') { alert('Cannot create a vendor named "Unassigned"'); return; }
     if (!formData.address.trim()) { alert('Address is required'); return; }
     if (!formData.phoneNumber.trim()) { alert('Phone Number is required'); return; }
     if (!formData.email.trim()) { alert('Email is required'); return; }
@@ -85,7 +86,7 @@ export default function ManageVendorsTab({ userRole }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{
             width: 44, height: 44, borderRadius: 12,
-            background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+            background: 'var(--primary)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: 'none',
           }}>
@@ -115,7 +116,7 @@ export default function ManageVendorsTab({ userRole }) {
       {/* ── Vendor Grid ── */}
       {isLoading ? (
         <SkeletonLoader rows={6} />
-      ) : fullVendors.length === 0 ? (
+      ) : fullVendors.filter(v => v.companyName?.trim().toLowerCase() !== 'unassigned').length === 0 ? (
         <div style={{
           background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
           border: '1px solid var(--border)', padding: '48px 24px',
@@ -126,7 +127,7 @@ export default function ManageVendorsTab({ userRole }) {
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
-          {fullVendors.map((ven, idx) => {
+          {fullVendors.filter(v => v.companyName?.trim().toLowerCase() !== 'unassigned').map((ven, idx) => {
             const accentColor = VENDOR_COLORS[idx % VENDOR_COLORS.length];
             return (
               <div

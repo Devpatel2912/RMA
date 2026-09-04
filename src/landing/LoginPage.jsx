@@ -4,6 +4,20 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Spinner from '../components/Spinner';
 import '../login.css'; // Re-use the existing login CSS
+import logoUrl from '../assets/logo.png';
+
+const getLoginErrorMessage = (err) => {
+  const serverError = err.response?.data?.error || '';
+
+  if (
+    err.response?.status === 503 ||
+    /prisma|database server|can't reach database|connect etimedout|enotfound|econnrefused/i.test(serverError)
+  ) {
+    return 'Database connection failed. Please check the backend DATABASE_URL and try again.';
+  }
+
+  return serverError || 'Login failed. Please check your credentials.';
+};
 
 export default function LoginPage({ setIsLoggedIn, setUserRole }) {
   const [showPassword, setShowPassword] = useState(false);
@@ -32,11 +46,7 @@ export default function LoginPage({ setIsLoggedIn, setUserRole }) {
       // Redirect to the dashboard
       navigate('/admin-panel');
     } catch (err) {
-      if (err.response && err.response.data && err.response.data.error) {
-        setLoginError(err.response.data.error);
-      } else {
-        setLoginError("Login failed. Please check your credentials.");
-      }
+      setLoginError(getLoginErrorMessage(err));
       console.error(err);
     } finally {
       setIsLoggingIn(false);
@@ -50,7 +60,9 @@ export default function LoginPage({ setIsLoggedIn, setUserRole }) {
 
 
         <div className="login-header" style={{ marginTop: '20px' }}>
-          <div className="login-logo">R</div>
+          <div className="login-logo">
+            <img src={logoUrl} alt="Logo" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
+          </div>
           <div className="login-title-group">
             <h1 className="login-title">Admin Portal</h1>
             <p className="login-subtitle">Sign in to your Avxperts Flow account</p>

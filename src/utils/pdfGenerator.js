@@ -1,8 +1,71 @@
 import jsPDF from 'jspdf';
 import { logoBase64 } from '../assets/logoBase64';
 
-export const generateTicketPDF = (stageName, ticket) => {
+const getImageEntries = (ticket) => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+  const serverUrl = baseUrl.replace(/\/api$/, '');
+
+  const resolveUrl = (urlStr) => {
+    if (!urlStr) return '';
+    if (urlStr.startsWith('http') || urlStr.startsWith('data:')) return urlStr;
+    const normalizedPath = urlStr.replace(/\\/g, '/');
+    return `${serverUrl}/${normalizedPath.startsWith('/') ? normalizedPath.slice(1) : normalizedPath}`;
+  };
+
+  const entries = [];
+  const processField = (field, labelPrefix) => {
+    if (!field) return;
+    try {
+      const arr = JSON.parse(field);
+      if (Array.isArray(arr)) {
+        arr.forEach((url, i) => entries.push({ label: `${labelPrefix} ${i + 1}`, url: resolveUrl(url) }));
+      } else {
+        entries.push({ label: labelPrefix, url: resolveUrl(field) });
+      }
+    } catch {
+      entries.push({ label: labelPrefix, url: resolveUrl(field) });
+    }
+  };
+
+  processField(ticket.inwardImageURL, 'Inward Image');
+  processField(ticket.vendorInwardImageURL, 'Vendor Inward Image');
+  processField(ticket.outwardImageURL, 'Outward Image');
+  return entries;
+};
+
+const loadImageData = async (src) => {
+  if (!src) return null;
+
+  const dataUrl = src.startsWith('data:')
+    ? src
+    : await new Promise((resolve, reject) => {
+        fetch(src)
+          .then((response) => {
+            if (!response.ok) throw new Error(`Image request failed: ${response.status}`);
+            return response.blob();
+          })
+          .then((blob) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          })
+          .catch(reject);
+      });
+
+  const dimensions = await new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth || 1, height: img.naturalHeight || 1 });
+    img.onerror = () => resolve({ width: 1, height: 1 });
+    img.src = dataUrl;
+  });
+
+  return { dataUrl, ...dimensions };
+};
+
+export const generateTicketPDF = async (stageName, ticket) => {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const pdfWindow = window.open('', '_blank');
   const pageW = 595.28;
   const margin = 20;
   const cW = pageW - margin * 2;
@@ -150,59 +213,62 @@ export const generateTicketPDF = (stageName, ticket) => {
   y += 20;
   ln(margin, y, margin + cW, y);
 
-  // Image Links
-  const links = [];
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
-  const serverUrl = baseUrl.replace('/api', '');
-    
-  const resolveUrl = (urlStr) => urlStr.startsWith('http') ? urlStr : `${serverUrl}${urlStr}`;
-
-  const processField = (field, labelPrefix) => {
-    if (!field) return;
-    try {
-      const arr = JSON.parse(field);
-      if (Array.isArray(arr)) {
-        arr.forEach((u, i) => links.push({ label: `${labelPrefix} ${i + 1}`, url: resolveUrl(u) }));
-      } else {
-        links.push({ label: labelPrefix, url: resolveUrl(field) });
-      }
-    } catch (e) {
-      links.push({ label: labelPrefix, url: resolveUrl(field) });
-    }
-  };
-
-  processField(ticket.inwardImageURL, 'Inward Image');
-  processField(ticket.outwardImageURL, 'Outward Image');
-  processField(ticket.vendorInwardImageURL, 'Vendor Inward Image');
+  // Images
+  const images = getImageEntries(ticket);
   y += 20;
-  font('bold', 12); doc.text('Reference Image Links', margin + 5, y);
+  font('bold', 12); doc.text('Reference Images', margin + 5, y);
   y += 15;
 
-  if (links.length > 0) {
-    font('normal', 10);
-    doc.setTextColor(0, 0, 255); // Blue for links
+  if (images.length > 0) {
+    const gap = 10;
+    const columns = 3;
+    const cellW = (cW - 10 - gap * (columns - 1)) / columns;
+    const imageH = 105;
+    const rowH = 128;
 
-    links.forEach(l => {
-      const linkText = `${l.label}`;
-      
-      // Just print the label
-      doc.text(linkText, margin + 5, y);
-      
-      const textWidth = doc.getTextWidth(linkText);
-      // Draw an underline to indicate it's clickable
-      doc.setDrawColor(0, 0, 255);
-      doc.line(margin + 5, y + 1, margin + 5 + textWidth, y + 1);
-      
-      // Add the invisible bounding box link
-      doc.link(margin + 5, y - 10, textWidth, 12, { url: l.url });
-      
-      y += 15;
-    });
+    for (let i = 0; i < images.length; i++) {
+      const col = i % columns;
+      if (col === 0 && y + rowH > 770) {
+        doc.addPage();
+        y = margin + 20;
+        font('bold', 12); doc.text('Reference Images', margin + 5, y);
+        y += 18;
+      }
 
-    doc.setTextColor(0, 0, 0); // Reset color
+      const x = margin + 5 + col * (cellW + gap);
+      let image = null;
+      try {
+        image = await loadImageData(images[i].url);
+      } catch (error) {
+        console.error('Image load error:', error);
+      }
+      strk([226, 232, 240], 0.5);
+      sRect(x, y, cellW, imageH);
+
+      if (image) {
+        const scale = Math.min(cellW / image.width, imageH / image.height);
+        const drawW = image.width * scale;
+        const drawH = image.height * scale;
+        const imageType = image.dataUrl.match(/^data:image\/(\w+)/)?.[1]?.toUpperCase() || 'JPEG';
+        const format = imageType === 'JPG' ? 'JPEG' : imageType;
+        doc.addImage(image.dataUrl, format, x + (cellW - drawW) / 2, y + (imageH - drawH) / 2, drawW, drawH);
+      } else {
+        font('normal', 9);
+        rgb([150, 150, 150]);
+        doc.text('Image unavailable', x + 8, y + 54);
+        rgb([0, 0, 0]);
+      }
+
+      font('normal', 8);
+      rgb([71, 85, 105]);
+      doc.text(images[i].label, x, y + imageH + 12, { maxWidth: cellW });
+      rgb([0, 0, 0]);
+
+      if (col === columns - 1 || i === images.length - 1) y += rowH;
+    }
   } else {
     font('normal', 10);
-    doc.setTextColor(150, 150, 150); // Gray
+    doc.setTextColor(150, 150, 150);
     doc.text('Image Not Found', margin + 5, y);
     doc.setTextColor(0, 0, 0);
     y += 15;
@@ -222,5 +288,10 @@ export const generateTicketPDF = (stageName, ticket) => {
 
 
   doc.autoPrint();
-  window.open(doc.output('bloburl'), '_blank');
+  const pdfUrl = doc.output('bloburl');
+  if (pdfWindow) {
+    pdfWindow.location.href = pdfUrl;
+  } else {
+    window.open(pdfUrl, '_blank');
+  }
 };

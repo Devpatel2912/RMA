@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ArrowRightCircle, Share, Eye, Printer, Loader2, SlidersHorizontal, Trash2, ClipboardList, Package, Truck, UserCheck } from 'lucide-react';
+import CustomDropdown from './CustomDropdown';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useTickets } from '../api/hooks';
@@ -128,10 +129,10 @@ export default function WorkflowTab({
   }).filter(Boolean)));
 
   const STAT_CONFIG = [
-    { label: 'CUSTOMER INWARD', key: 'CUSTOMER INWARD', icon: ClipboardList, iconBg: '#ECFDF5', iconColor: '#059669', indicatorColor: '#10B981' },
-    { label: 'SENT TO VENDOR', key: 'VENDOR OUTWARD', icon: Truck, iconBg: '#FFFBEB', iconColor: '#D97706', indicatorColor: '#F59E0B' },
-    { label: 'AT VENDOR', key: 'VENDOR INWARD', icon: Package, iconBg: '#F5F3FF', iconColor: '#7C3AED', indicatorColor: '#8B5CF6' },
-    { label: 'READY FOR CUSTOMER', key: 'CUSTOMER OUTWARD', icon: UserCheck, iconBg: '#ECFDF5', iconColor: '#059669', indicatorColor: '#10B981' },
+    { label: 'Customer Inward', key: 'CUSTOMER INWARD', icon: ClipboardList, iconBg: '#f3f4f6', iconColor: '#000000', indicatorColor: '#ccff00' },
+    { label: 'Sent to Vendor', key: 'VENDOR OUTWARD', icon: Truck, iconBg: '#f3f4f6', iconColor: '#000000', indicatorColor: '#a09bf4' },
+    { label: 'At Vendor', key: 'VENDOR INWARD', icon: Package, iconBg: '#f3f4f6', iconColor: '#000000', indicatorColor: '#1f1f1f' },
+    { label: 'Ready for Customer', key: 'CUSTOMER OUTWARD', icon: UserCheck, iconBg: '#f3f4f6', iconColor: '#000000', indicatorColor: '#ccff00' },
   ];
 
   return (
@@ -140,14 +141,18 @@ export default function WorkflowTab({
         {STAT_CONFIG.map(({ label, key, icon: Icon, iconBg, iconColor, indicatorColor }) => {
           const count = recentActivities.filter(a => a.status === key).length;
           return (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-              <div>
-                <div style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
-                <div style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', lineHeight: 1 }}>{count}</div>
-                <div style={{ height: '3px', width: '30px', backgroundColor: indicatorColor, marginTop: '8px', borderRadius: '2px' }} />
+            <div key={key} style={{ padding: '16px 16px', background: '#fff', borderRadius: 'var(--radius-lg)', boxShadow: '0 4px 24px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon size={14} color={iconColor} />
+                </div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#000' }}>{label}</div>
               </div>
-              <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Icon size={18} color={iconColor} />
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+                <div style={{ fontSize: '32px', fontWeight: '800', color: '#000', lineHeight: 1, letterSpacing: '-1px' }}>{count}</div>
+              </div>
+              <div style={{ height: '6px', width: '100%', backgroundColor: '#f3f4f6', borderRadius: '4px', overflow: 'hidden', marginTop: 'auto' }}>
+                <div style={{ height: '100%', width: count === 0 ? '0%' : '60%', backgroundColor: indicatorColor, borderRadius: '4px' }} />
               </div>
             </div>
           );
@@ -177,39 +182,37 @@ export default function WorkflowTab({
               Delete Selected
             </button>
           )}
-          <select
-            className="filter-dropdown"
+          <CustomDropdown
             value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-            style={{ minWidth: 110 }}
-          >
-            <option value="All">All Months</option>
-            {['01','02','03','04','05','06','07','08','09','10','11','12'].map(m => (
-              <option key={m} value={m}>{new Date(2000, parseInt(m) - 1, 1).toLocaleString('default', { month: 'short' })}</option>
-            ))}
-          </select>
+            onChange={setFilterMonth}
+            style={{ minWidth: 120 }}
+            options={[
+              { value: 'All', label: 'All Months' },
+              ...['01','02','03','04','05','06','07','08','09','10','11','12'].map(m => ({
+                value: m,
+                label: new Date(2000, parseInt(m) - 1, 1).toLocaleString('default', { month: 'short' })
+              }))
+            ]}
+          />
 
-          <select
-            className="filter-dropdown"
+          <CustomDropdown
             value={filterYear}
-            onChange={(e) => setFilterYear(e.target.value)}
-            style={{ minWidth: 90 }}
-          >
-            <option value="All">All Years</option>
-            {uniqueYears.map(y => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
+            onChange={setFilterYear}
+            style={{ minWidth: 100 }}
+            options={[
+              { value: 'All', label: 'All Years' },
+              ...uniqueYears.map(y => ({ value: String(y), label: String(y) }))
+            ]}
+          />
 
-          <select
-            className="filter-dropdown"
+          <CustomDropdown
             value={workflowFilter}
-            onChange={(e) => setWorkflowFilter(e.target.value)}
-          >
-            {['All Items', 'Customer Inward', 'Vendor Outward', 'Vendor Inward', 'Customer Outward', 'Completed'].map(tab => (
-              <option key={tab} value={tab}>{tab}</option>
-            ))}
-          </select>
+            onChange={setWorkflowFilter}
+            style={{ minWidth: 160 }}
+            options={['All Items', 'Customer Inward', 'Vendor Outward', 'Vendor Inward', 'Customer Outward', 'Completed'].map(tab => ({
+              value: tab, label: tab
+            }))}
+          />
 
           <div className="search-box">
             <Search size={15} color="var(--text-muted)" />

@@ -6,14 +6,14 @@ import { useCategories } from '../api/hooks';
 import Spinner, { SkeletonLoader } from './Spinner';
 
 const CATEGORY_COLORS = [
-  { bg: 'rgba(4,120,87,0.08)',   dot: '#10b981' },
-  { bg: 'rgba(34,197,94,0.08)',   dot: '#22C55E' },
-  { bg: 'rgba(139,92,246,0.08)', dot: '#8B5CF6' },
-  { bg: 'rgba(245,158,11,0.08)', dot: '#F59E0B' },
-  { bg: 'rgba(236,72,153,0.08)', dot: '#EC4899' },
-  { bg: 'rgba(6,182,212,0.08)',  dot: '#06B6D4' },
-  { bg: 'rgba(239,68,68,0.08)',  dot: '#EF4444' },
-  { bg: 'rgba(16,185,129,0.08)', dot: '#10B981' },
+  { bg: 'var(--bg)', dot: '#000000' },
+  { bg: 'var(--bg)', dot: '#111827' },
+  { bg: 'var(--bg)', dot: '#374151' },
+  { bg: 'var(--bg)', dot: '#4B5563' },
+  { bg: 'var(--bg)', dot: '#000000' },
+  { bg: 'var(--bg)', dot: '#111827' },
+  { bg: 'var(--bg)', dot: '#374151' },
+  { bg: 'var(--bg)', dot: '#4B5563' },
 ];
 
 export default function ManageCategoriesTab({ userRole }) {
@@ -79,7 +79,7 @@ export default function ManageCategoriesTab({ userRole }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{
             width: 44, height: 44, borderRadius: 12,
-            background: 'linear-gradient(135deg, var(--primary), #059669)',
+            background: 'var(--primary)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: 'none',
           }}>
@@ -127,10 +127,10 @@ export default function ManageCategoriesTab({ userRole }) {
                 border: 'none', cursor: isAdding || !newCategoryName.trim() ? 'not-allowed' : 'pointer',
                 background: isAdding || !newCategoryName.trim()
                   ? 'var(--border)'
-                  : 'linear-gradient(135deg, var(--primary), #059669)',
+                  : 'var(--primary)',
                 color: isAdding || !newCategoryName.trim() ? 'var(--text-muted)' : 'white',
                 fontWeight: 700, fontSize: 13.5,
-                boxShadow: isAdding || !newCategoryName.trim() ? 'none' : '0 4px 12px rgba(4,120,87,0.35)',
+                boxShadow: 'none',
                 transition: 'all 0.2s', whiteSpace: 'nowrap',
                 fontFamily: 'Inter, sans-serif',
               }}

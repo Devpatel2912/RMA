@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Truck, Search, Package } from 'lucide-react';
+import CustomDropdown from './CustomDropdown';
 
 const CourierChargesTab = ({ recentActivities }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -139,35 +140,28 @@ const CourierChargesTab = ({ recentActivities }) => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <select
+            <CustomDropdown
               value={filterMonth}
-              onChange={(e) => setFilterMonth(e.target.value)}
-              style={{
-                padding: '6px 10px', fontSize: 13, border: '1.5px solid var(--border)',
-                borderRadius: 8, outline: 'none', background: 'var(--surface)', color: 'var(--text-primary)',
-                fontFamily: 'Inter, sans-serif'
-              }}
-            >
-              <option value="All">All Months</option>
-              {['01','02','03','04','05','06','07','08','09','10','11','12'].map(m => (
-                <option key={m} value={m}>{new Date(2000, parseInt(m) - 1, 1).toLocaleString('default', { month: 'short' })}</option>
-              ))}
-            </select>
+              onChange={setFilterMonth}
+              options={[
+                { value: 'All', label: 'All Months' },
+                ...['01','02','03','04','05','06','07','08','09','10','11','12'].map(m => ({
+                  value: m,
+                  label: new Date(2000, parseInt(m) - 1, 1).toLocaleString('default', { month: 'short' })
+                }))
+              ]}
+              style={{ minWidth: 120 }}
+            />
 
-            <select
+            <CustomDropdown
               value={filterYear}
-              onChange={(e) => setFilterYear(e.target.value)}
-              style={{
-                padding: '6px 10px', fontSize: 13, border: '1.5px solid var(--border)',
-                borderRadius: 8, outline: 'none', background: 'var(--surface)', color: 'var(--text-primary)',
-                fontFamily: 'Inter, sans-serif'
-              }}
-            >
-              <option value="All">All Years</option>
-              {uniqueYears.map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
+              onChange={setFilterYear}
+              options={[
+                { value: 'All', label: 'All Years' },
+                ...uniqueYears.map(y => ({ value: String(y), label: String(y) }))
+              ]}
+              style={{ minWidth: 110 }}
+            />
 
             {(filterMonth !== 'All' || filterYear !== 'All' || searchTerm) && (
               <button

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Camera, Upload, X } from 'lucide-react';
 import CameraCapture from './CameraCapture';
+import CustomDropdown from './CustomDropdown';
 import { generateTicketPDF } from '../utils/pdfGenerator';
 import { useVendors } from '../api/hooks';
 
@@ -39,7 +40,7 @@ export default function AdvanceWorkflowModal({
     }
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     const printItem = { ...advancingItem };
     if (docketNumber) printItem.docketNumber = docketNumber;
     if (courierCharge) printItem.courierCharge = courierCharge;
@@ -49,7 +50,7 @@ export default function AdvanceWorkflowModal({
     }
     if (newSerialNumber) printItem.newSerialNumber = newSerialNumber;
     
-    generateTicketPDF(advancingItem.status, printItem);
+    await generateTicketPDF(advancingItem.status, printItem);
   };
 
   if (!advancingItem) return null;
@@ -90,17 +91,15 @@ export default function AdvanceWorkflowModal({
                   </div>
                   <div className="detail-item">
                     <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Service Vendor</span>
-                    <select 
-                      className="form-input" 
-                      style={{ padding: '6px', fontSize: '14px', border: '1px solid #e2e8f0', borderRadius: '4px', width: '100%', backgroundColor: 'white' }}
+                    <CustomDropdown 
+                      style={{ width: '100%' }}
                       value={advancingItem.serviceVendor || ''}
-                      onChange={(e) => setAdvancingItem({ ...advancingItem, serviceVendor: e.target.value })}
-                    >
-                      <option value="">Select Vendor...</option>
-                      {vendors.map(v => (
-                        <option key={v.id} value={v.companyName}>{v.companyName}</option>
-                      ))}
-                    </select>
+                      onChange={(val) => setAdvancingItem({ ...advancingItem, serviceVendor: val })}
+                      options={[
+                        { value: '', label: 'Select Vendor...' },
+                        ...vendors.map(v => ({ value: v.companyName, label: v.companyName }))
+                      ]}
+                    />
                   </div>
                   <div className="detail-item">
                     <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Serial Number</span>

@@ -5,12 +5,12 @@
    ═══════════════════════════════════════════════════════ */
 :root {
   /* Brand Colors */
-  --primary:            #047857;
-  --primary-hover:      #065f46;
-  --primary-light:      #ecfdf5;
-  --primary-glow:       rgba(4, 120, 87, 0.15);
-  --accent:             #10b981;
-  --accent-light:       #d1fae5;
+  --primary:            #000000;
+  --primary-hover:      #374151;
+  --primary-light:      #f3f4f6;
+  --primary-glow:       rgba(0, 0, 0, 0.1);
+  --accent:             #000000;
+  --accent-light:       rgba(0, 0, 0, 0.05);
 
   /* Status Colors */
   --success:            #22C55E;
@@ -27,30 +27,30 @@
   --purple-border:      #DDD6FE;
 
   /* Backgrounds */
-  --bg:                 #F8FAFC;
+  --bg:                 #e2e2e5;
   --surface:            #FFFFFF;
   --surface-hover:      #F8FAFC;
   --surface-elevated:   #FFFFFF;
 
   /* Sidebar */
-  --sidebar-bg:         #FFFFFF;
-  --sidebar-border:     #E2E8F0;
-  --sidebar-text:       #64748B;
-  --sidebar-text-hover: #0F172A;
+  --sidebar-bg:         #23232c;
+  --sidebar-border:     transparent;
+  --sidebar-text:       #9ca3af;
+  --sidebar-text-hover: #ffffff;
   --sidebar-active:     #FFFFFF;
-  --sidebar-nav-hover:  #F8FAFC;
-  --sidebar-nav-active: #047857;
+  --sidebar-nav-hover:  #2d2d3a;
+  --sidebar-nav-active: #ffffff;
 
   /* Text */
-  --text-primary:       #0F172A;
-  --text-secondary:     #64748B;
-  --text-muted:         #94A3B8;
+  --text-primary:       #000000;
+  --text-secondary:     #6b7280;
+  --text-muted:         #9ca3af;
   --text-inverted:      #FFFFFF;
 
   /* Borders */
-  --border:             #E2E8F0;
+  --border:             transparent;
   --border-strong:      #CBD5E1;
-  --border-focus:       #047857;
+  --border-focus:       #ccff00;
 
   /* Status Badge Colors */
   --color-received:           #10b981;
@@ -74,11 +74,11 @@
   --footer-height:      36px;
 
   /* Border Radius */
-  --radius-xs:          4px;
-  --radius-sm:          8px;
-  --radius:             12px;
-  --radius-lg:          16px;
-  --radius-xl:          20px;
+  --radius-xs:          8px;
+  --radius-sm:          12px;
+  --radius:             16px;
+  --radius-lg:          24px;
+  --radius-xl:          32px;
   --radius-full:        9999px;
 
   /* Shadows */
@@ -115,7 +115,7 @@
   --text-muted:         #64748B;
   --border:             #1E293B;
   --border-strong:      #2D3748;
-  --primary-light:      rgba(4,120,87,0.15);
+  --primary-light:      rgba(204,255,0,0.15);
   --bg-badge-received:        rgba(4,120,87,0.15);
   --text-badge-received:      #6ee7b7;
   --bg-badge-vendor-out:      rgba(245,158,11,0.15);
@@ -198,6 +198,19 @@ body {
   transition: background-color var(--transition-slow), color var(--transition-slow);
 }
 
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="password"],
+input[type="date"],
+input[type="search"],
+input[type="tel"],
+input[type="url"] {
+  border-radius: var(--radius-full, 9999px) !important;
+  padding-left: 18px !important;
+  padding-right: 18px !important;
+}
+
 #root {
   display: flex;
   height: 100dvh;
@@ -247,20 +260,31 @@ body {
   border-right: 1px solid var(--sidebar-border);
   position: relative;
   overflow: hidden;
-  transition: transform var(--transition-slow);
+  transition: width var(--transition-slow), transform var(--transition-slow);
 }
 
-/* Subtle gradient top-glow */
-.sidebar::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 200px;
-  background: radial-gradient(ellipse at 50% 0%, rgba(4, 120, 87, 0.08) 0%, transparent 70%);
-  pointer-events: none;
+/* Collapsed State */
+.sidebar.collapsed {
+  width: 80px;
+  padding: 20px 10px;
 }
+
+.sidebar.collapsed .brand-title,
+.sidebar.collapsed .brand-subtitle,
+.sidebar.collapsed .nav-item span,
+.sidebar.collapsed .new-inward-btn span,
+.sidebar.collapsed .logout-btn span {
+  display: none;
+}
+
+.sidebar.collapsed .nav-item,
+.sidebar.collapsed .new-inward-btn,
+.sidebar.collapsed .logout-btn {
+  justify-content: center;
+  padding: 10px;
+}
+
+
 
 /* ── Brand ── */
 .brand {
@@ -274,8 +298,8 @@ body {
 .brand-logo {
   width: 38px;
   height: 38px;
-  background: linear-gradient(135deg, var(--primary) 0%, #065f46 100%);
-  color: white;
+  background: #000000;
+  color: #ffffff;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
@@ -288,7 +312,7 @@ body {
 }
 
 .brand-title {
-  color: var(--text-primary);
+  color: #ffffff;
   font-weight: 700;
   font-size: 15px;
   line-height: 1.2;
@@ -327,7 +351,7 @@ body {
   align-items: center;
   gap: 11px;
   padding: 10px 12px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   cursor: pointer;
   transition: all var(--transition);
   font-weight: 500;
@@ -345,20 +369,11 @@ body {
 
 .nav-item.active {
   background-color: var(--sidebar-nav-active);
-  color: white;
+  color: #000000;
   font-weight: 600;
 }
 
-/* Active left accent bar */
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--accent);
-}
+/* Active left accent bar removed for UI redesign */
 
 .nav-item svg {
   flex-shrink: 0;
@@ -371,8 +386,8 @@ body {
 
 /* ── New Inward Button ── */
 .new-inward-btn {
-  background: linear-gradient(135deg, var(--primary) 0%, #065f46 100%);
-  color: white;
+  background: #000000;
+  color: #ffffff;
   border: none;
   border-radius: var(--radius-sm);
   padding: 12px 16px;
@@ -391,7 +406,7 @@ body {
 }
 
 .new-inward-btn:hover {
-  background: linear-gradient(135deg, var(--primary-hover) 0%, #064e3b 100%);
+  background: var(--primary-hover);
   box-shadow: none;
   transform: translateY(-1px);
 }

@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { MessageSquare, Plus, Save, X } from 'lucide-react';
 import axios from 'axios';
+import CustomDropdown from './CustomDropdown';
 
 const LOCAL_FORMATS_KEY = 'rma-local-whatsapp-formats';
 
@@ -238,40 +239,33 @@ const WhatsAppMsgTab = () => {
             <div className="form-row" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
               <div className="form-group" style={{ minWidth: 220 }}>
                 <label className="form-label">Stage</label>
-                <select
-                  className="form-select"
+                <CustomDropdown
                   value={formData.stage}
-                  onChange={(event) => handleStageChange(event.target.value)}
-                >
-                  <option value="">Select stage</option>
-                  {stageOptions.map((stage) => (
-                    <option key={stage} value={stage}>
-                      {stage}
-                    </option>
-                  ))}
-                </select>
+                  onChange={handleStageChange}
+                  options={[
+                    { value: '', label: 'Select stage' },
+                    ...stageOptions.map((stage) => ({ value: stage, label: stage }))
+                  ]}
+                  style={{ width: '100%' }}
+                />
               </div>
 
               <div className="form-group" style={{ minWidth: 220 }}>
                 <label className="form-label">Format</label>
-                <select
-                  className="form-select"
+                <CustomDropdown
                   value={formData.format}
-                  onChange={(event) => handleFormatChange(event.target.value)}
+                  onChange={handleFormatChange}
                   disabled={!hasSelectedStage || !hasFormatsForSelectedStage}
-                >
-                  {!hasSelectedStage ? (
-                    <option value="">Select stage first</option>
-                  ) : !hasFormatsForSelectedStage ? (
-                    <option value="">No format added in this stage</option>
-                  ) : (
-                    availableFormatsForStage.map((format) => (
-                      <option key={format.name} value={format.name}>
-                        {format.name}
-                      </option>
-                    ))
-                  )}
-                </select>
+                  options={[
+                    !hasSelectedStage 
+                      ? { value: '', label: 'Select stage first' }
+                      : !hasFormatsForSelectedStage
+                        ? { value: '', label: 'No format added in this stage' }
+                        : { value: '', label: 'Select format' }, // Assuming we want a default option if none is selected
+                    ...(availableFormatsForStage || []).map((format) => ({ value: format.name, label: format.name }))
+                  ].filter(opt => opt.label !== 'Select format' || !formData.format)} // Quick hack to show placeholder properly
+                  style={{ width: '100%' }}
+                />
               </div>
 
               <div style={{ display: 'flex', gap: '8px' }}>

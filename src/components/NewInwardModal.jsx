@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Camera, Upload, User, Package, Tag, Building2, Hash, Mail, Calendar, FileText, CheckCircle2, Circle, ArrowRight } from 'lucide-react';
+import { X, Camera, Upload, User, Package, Tag, Building2, Hash, Mail, Calendar, FileText, CheckCircle2, Circle, ArrowRight, ScanBarcode } from 'lucide-react';
 import CameraCapture from './CameraCapture';
 import { useCategories, useVendors } from '../api/hooks';
 import Spinner from './Spinner';
@@ -30,10 +30,10 @@ const SearchableDropdown = ({ options, value, onChange, placeholder, icon: Icon 
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '10px 14px',
           border: `1.5px solid ${isOpen ? 'var(--primary)' : 'var(--border)'}`,
-          borderRadius: 'var(--radius-sm)',
+          borderRadius: 'var(--radius-full, 9999px)',
           background: 'var(--surface-hover)',
           cursor: 'pointer', userSelect: 'none',
-          boxShadow: isOpen ? '0 0 0 3px rgba(4,120,87,0.12)' : 'none',
+          boxShadow: 'none',
           transition: 'all 0.18s',
         }}
       >
@@ -127,10 +127,9 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
   const previewRma = formData.rma || `AV-${Math.floor(100000 + Math.random() * 900000).toString().slice(0, 6)}`;
 
   const inputStyle = {
-    display: 'flex', alignItems: 'center', gap: 10,
     padding: '10px 14px',
     border: '1.5px solid var(--border)',
-    borderRadius: 'var(--radius-sm)',
+    borderRadius: 'var(--radius-full, 9999px)',
     background: 'var(--surface-hover)',
     fontSize: 14, color: 'var(--text-primary)',
     fontFamily: 'Inter, sans-serif',
@@ -143,8 +142,8 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
       ...provided,
       backgroundColor: state.isFocused ? 'var(--surface)' : 'var(--surface-hover)',
       borderColor: state.isFocused ? 'var(--primary)' : 'var(--border)',
-      boxShadow: state.isFocused ? '0 0 0 3px rgba(4,120,87,0.12)' : 'none',
-      borderRadius: 'var(--radius-sm)',
+      boxShadow: 'none',
+      borderRadius: 'var(--radius-full, 9999px)',
       padding: '2px',
       fontSize: 14,
       fontFamily: 'Inter, sans-serif',
@@ -296,8 +295,8 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{
-              width: 40, height: 40, borderRadius: 10,
-              background: 'linear-gradient(135deg, var(--primary), #059669)',
+              width: 46, height: 46, borderRadius: 12,
+              background: 'var(--primary)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: 'none',
             }}>
@@ -353,8 +352,9 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
                     <User size={14} color="var(--text-muted)" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     <input
                       type="text" name="customerName" value={formData.customerName}
+                      className="new-inward-input-with-icon"
                       onChange={handleInputChange} placeholder="Full legal name"
-                      style={{ ...inputStyle, paddingLeft: 36 }}
+                      style={{ ...inputStyle, padding: '10px 14px 10px 44px' }}
                       onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(4,120,87,0.12)'; e.target.style.background = 'var(--surface)'; }}
                       onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; e.target.style.background = 'var(--surface-hover)'; }}
                     />
@@ -389,8 +389,23 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
                     <Mail size={14} color="var(--text-muted)" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     <input
                       type="email" name="email" value={formData.email}
+                      className="new-inward-input-with-icon"
                       onChange={handleInputChange} placeholder="customer@example.com"
-                      style={{ ...inputStyle, paddingLeft: 36 }}
+                      style={{ ...inputStyle, padding: '10px 14px 10px 44px' }}
+                      onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(4,120,87,0.12)'; e.target.style.background = 'var(--surface)'; }}
+                      onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; e.target.style.background = 'var(--surface-hover)'; }}
+                    />
+                  </div>
+                </Field>
+
+                <Field label="Customer Address *">
+                  <div style={{ position: 'relative' }}>
+                    <Building2 size={14} color="var(--text-muted)" style={{ position: 'absolute', left: 13, top: 14, pointerEvents: 'none' }} />
+                    <textarea
+                      name="customerAddress" value={formData.customerAddress || ''}
+                      onChange={handleInputChange} rows={2}
+                      placeholder="House, street, area"
+                      style={{ ...inputStyle, padding: '10px 14px 10px 44px', resize: 'vertical', borderRadius: 'var(--radius-sm, 12px)', lineHeight: 1.5 }}
                       onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(4,120,87,0.12)'; e.target.style.background = 'var(--surface)'; }}
                       onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; e.target.style.background = 'var(--surface-hover)'; }}
                     />
@@ -449,8 +464,9 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
                     <Hash size={14} color="var(--text-muted)" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 1 }} />
                     <input
                       type="text" name="pincode" value={formData.pincode || ''}
+                      className="new-inward-input-with-icon"
                       onChange={handlePincodeChange} placeholder="Enter Pincode"
-                      style={{ ...inputStyle, paddingLeft: 36 }}
+                      style={{ ...inputStyle, padding: '10px 14px 10px 44px' }}
                       onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(4,120,87,0.12)'; e.target.style.background = 'var(--surface)'; }}
                       onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; e.target.style.background = 'var(--surface-hover)'; }}
                     />
@@ -476,8 +492,9 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
                       <Package size={14} color="var(--text-muted)" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                       <input
                         type="text" name="productName" value={formData.productName}
+                        className="new-inward-input-with-icon"
                         onChange={handleInputChange} placeholder="e.g., Precision Pro X1"
-                        style={{ ...inputStyle, paddingLeft: 36 }}
+                        style={{ ...inputStyle, padding: '10px 14px 10px 54px' }}
                         onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(4,120,87,0.12)'; e.target.style.background = 'var(--surface)'; }}
                         onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; e.target.style.background = 'var(--surface-hover)'; }}
                       />
@@ -487,11 +504,12 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
 
                 <Field label="Original Serial # (Optional)">
                   <div style={{ position: 'relative' }}>
-                    <Hash size={14} color="var(--text-muted)" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    <ScanBarcode size={14} color="var(--text-muted)" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     <input
                       type="text" name="serialNumber" value={formData.serialNumber}
+                      className="new-inward-input-with-icon"
                       onChange={handleInputChange} placeholder="SN-XXXX-XXXX"
-                      style={{ ...inputStyle, paddingLeft: 36, fontFamily: 'monospace' }}
+                      style={{ ...inputStyle, padding: '10px 14px 10px 44px', fontFamily: 'monospace' }}
                       onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(4,120,87,0.12)'; e.target.style.background = 'var(--surface)'; }}
                       onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; e.target.style.background = 'var(--surface-hover)'; }}
                     />
@@ -677,12 +695,12 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
             disabled={isSaving}
             style={{
               padding: '10px 28px', border: 'none',
-              borderRadius: 9,
-              background: isSaving ? 'var(--border)' : 'linear-gradient(135deg, var(--primary), #065f46)',
+              borderRadius: 'var(--radius-full, 9999px)',
+              background: isSaving ? 'var(--border)' : 'var(--primary)',
               color: isSaving ? 'var(--text-muted)' : 'white',
               fontSize: 13.5, fontWeight: 700, cursor: isSaving ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', gap: 9,
-              boxShadow: isSaving ? 'none' : '0 4px 14px rgba(4,120,87,0.4)',
+              boxShadow: 'none',
               transition: 'all 0.18s', fontFamily: 'Inter, sans-serif',
             }}
           >
