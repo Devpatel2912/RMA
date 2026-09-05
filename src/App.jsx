@@ -150,37 +150,7 @@ function App() {
     };
   }, []);
 
-  // Barcode Scanner Global Listener
-  useEffect(() => {
-    let barcode = '';
-    let lastKeyTime = Date.now();
 
-    const handleKeyDown = (e) => {
-      const currentTime = Date.now();
-
-      // If time between keystrokes is more than 50ms, consider it manual typing and reset
-      if (currentTime - lastKeyTime > 50) {
-        barcode = '';
-      }
-
-      // If Enter is pressed and we have a captured barcode string
-      if (e.key === 'Enter' && barcode.length > 3) {
-        if (isModalOpen) {
-          setFormData(prev => ({ ...prev, serialNumber: barcode }));
-        } else if (advancingItem && advancingItem.status === 'VENDOR INWARD') {
-          setNewSerialNumber(barcode);
-        }
-        barcode = '';
-      } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        barcode += e.key;
-      }
-
-      lastKeyTime = currentTime;
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isModalOpen, advancingItem]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

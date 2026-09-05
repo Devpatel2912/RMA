@@ -99,9 +99,9 @@ const SearchableDropdown = ({ options, value, onChange, placeholder, icon: Icon 
 
 /* ─────────── Workflow Steps (right panel) ─────────── */
 const WORKFLOW_STEPS = [
-  { label: 'Customer Inward',  desc: 'Active Process',  color: '#047857' },
-  { label: 'Vendor Dispatch',  desc: 'Pending Entry',   color: '#F59E0B' },
-  { label: 'Resolution',       desc: 'Awaiting Return', color: '#22C55E' },
+  { label: 'Customer Inward', desc: 'Active Process', color: '#047857' },
+  { label: 'Vendor Dispatch', desc: 'Pending Entry', color: '#F59E0B' },
+  { label: 'Resolution', desc: 'Awaiting Return', color: '#22C55E' },
 ];
 
 /* ─────────── Field Row ─────────── */
@@ -186,11 +186,11 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
   };
 
   const countryOptions = Country.getAllCountries().map(c => ({ value: c.isoCode, label: c.name }));
-  const stateOptions = formData.country?.value 
-    ? State.getStatesOfCountry(formData.country.value).map(s => ({ value: s.isoCode, label: s.name })) 
+  const stateOptions = formData.country?.value
+    ? State.getStatesOfCountry(formData.country.value).map(s => ({ value: s.isoCode, label: s.name }))
     : [];
-  const cityOptions = (formData.country?.value && formData.state?.value) 
-    ? City.getCitiesOfState(formData.country.value, formData.state.value).map(c => ({ value: c.name, label: c.name })) 
+  const cityOptions = (formData.country?.value && formData.state?.value)
+    ? City.getCitiesOfState(formData.country.value, formData.state.value).map(c => ({ value: c.name, label: c.name }))
     : [];
 
   const handleCountryChange = (selectedOption) => {
@@ -208,13 +208,13 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
   const handlePincodeChange = async (e) => {
     const code = e.target.value;
     setFormData(prev => ({ ...prev, pincode: code }));
-    
+
     // Auto-fetch city and state by pincode
     if (code.length === 6) {
       try {
         const response = await fetch(`https://api.postalpincode.in/pincode/${code}`);
         const data = await response.json();
-        
+
         if (data && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
           const postOffice = data[0].PostOffice[0];
           const apiStateName = postOffice.State;
@@ -222,28 +222,28 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
 
           // Default Country to India for this API
           const country = { value: 'IN', label: 'India' };
-          
+
           // Find matching state from country-state-city
           const states = State.getStatesOfCountry('IN');
-          const matchingState = states.find(s => 
-            s.name.toLowerCase() === apiStateName.toLowerCase() || 
+          const matchingState = states.find(s =>
+            s.name.toLowerCase() === apiStateName.toLowerCase() ||
             s.name.toLowerCase().includes(apiStateName.toLowerCase())
           );
-          
+
           let state = null;
           let city = null;
 
           if (matchingState) {
             state = { value: matchingState.isoCode, label: matchingState.name };
-            
+
             // Find matching city
             const cities = City.getCitiesOfState('IN', matchingState.isoCode);
-            const matchingCity = cities.find(c => 
-              c.name.toLowerCase() === apiCityName.toLowerCase() || 
+            const matchingCity = cities.find(c =>
+              c.name.toLowerCase() === apiCityName.toLowerCase() ||
               c.name.toLowerCase().includes(apiCityName.toLowerCase()) ||
               apiCityName.toLowerCase().includes(c.name.toLowerCase())
             );
-            
+
             if (matchingCity) {
               city = { value: matchingCity.name, label: matchingCity.name };
             } else {
@@ -252,12 +252,12 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
             }
           }
 
-          setFormData(prev => ({ 
-            ...prev, 
-            country: prev.country || country, 
-            state: state || prev.state, 
-            city: city || prev.city, 
-            pincode: code 
+          setFormData(prev => ({
+            ...prev,
+            country: prev.country || country,
+            state: state || prev.state,
+            city: city || prev.city,
+            pincode: code
           }));
         }
       } catch (err) {
@@ -508,7 +508,7 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
                     <input
                       type="text" name="serialNumber" value={formData.serialNumber}
                       className="new-inward-input-with-icon"
-                      onChange={handleInputChange} placeholder="SN-XXXX-XXXX"
+                      onChange={handleInputChange} placeholder="Serial Number"
                       style={{ ...inputStyle, padding: '10px 14px 10px 44px', fontFamily: 'monospace' }}
                       onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(4,120,87,0.12)'; e.target.style.background = 'var(--surface)'; }}
                       onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; e.target.style.background = 'var(--surface-hover)'; }}
