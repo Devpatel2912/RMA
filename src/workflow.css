@@ -158,13 +158,10 @@
 .workflow-th {
   padding: 13px 20px;
   text-align: left;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--text-muted, #94A3B8);
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  background-color: var(--surface-hover, #F8FAFC);
-  border-bottom: 1.5px solid var(--border, #E2E8F0);
+  font-size: 11px;
+  font-weight: 600;
+  color: #94A3B8;
+  border-bottom: 1px solid #E2E8F0;
   white-space: nowrap;
 }
 
@@ -178,9 +175,9 @@
   border-bottom: none;
 }
 
-/* Zebra striping */
+/* Zebra striping removed for clean look */
 .workflow-tr:nth-child(even) {
-  background-color: rgba(248,250,252,0.5);
+  background-color: #FFFFFF;
 }
 
 [data-theme="dark"] .workflow-tr:nth-child(even) {
@@ -188,7 +185,7 @@
 }
 
 .workflow-tr:hover {
-  background-color: var(--primary-light, #ecfdf5) !important;
+  background-color: #F8FAFC !important;
 }
 
 .workflow-td {
@@ -198,11 +195,11 @@
 
 /* ── Cell styles ── */
 .ticket-id {
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  color: var(--primary, #047857);
+  font-family: 'Inter', sans-serif;
+  color: #4F46E5;
   font-weight: 600;
   font-size: 13px;
-  letter-spacing: 0.3px;
+  letter-spacing: 0px;
 }
 
 .table-cell-main {
@@ -236,29 +233,26 @@
 
 /* ── Action Buttons ── */
 .action-btn {
-  width: 34px;
-  height: 34px;
+  padding: 6px 14px;
   border: none;
-  color: var(--primary, #047857);
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm, 8px);
+  border-radius: 99px;
   transition: all 0.18s;
-  background: var(--primary-light, #ecfdf5);
 }
 
 .action-btn:hover {
-  background-color: var(--primary, #000000);
-  color: #ffffff;
-  transform: scale(1.08);
-  box-shadow: none;
+  filter: brightness(0.95);
+  transform: translateY(-1px);
 }
 
 .action-btn:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
-  opacity: 0.5;
   transform: none;
 }
 
@@ -307,14 +301,32 @@
 
 .page-btn:disabled {
   opacity: 0.45;
-  cursor: not-allowed;
-  background-color: var(--surface-hover, #F8FAFC);
 }
 
-.page-btn.active {
-  background-color: var(--primary, #000000);
-  border-color: var(--primary, #000000);
-  color: #ffffff;
+/* Badge colors based on status */
+.bg-yellow-light {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.bg-purple-light {
+  background: #E0E7FF;
+  color: #4F46E5;
+}
+
+.bg-blue-light {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.bg-green-light {
+  background: #D1FAE5;
+  color: #059669;
+}
+
+.bg-green-dark {
+  background: #A7F3D0;
+  color: #065F46;
 }
 
 /* ── Spinner ── */

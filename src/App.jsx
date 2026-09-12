@@ -523,16 +523,17 @@ function App() {
         <div className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''} ${isSidebarCollapsed ? 'collapsed' : ''}`}>
           <div className="brand" style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start' }}>
             <div 
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', padding: '12px 4px' }}
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
               title="Toggle Sidebar"
             >
-              <img src={logoImg} alt="Logo" className="brand-logo" style={{ background: 'none', objectFit: 'contain' }} />
-              {!isSidebarCollapsed && (
+              {!isSidebarCollapsed ? (
                 <div>
-                  <div className="brand-title">AV XPERTS</div>
-                  <div className="brand-subtitle">Service Management</div>
+                  <div className="brand-title" style={{ fontSize: '22px', color: '#1F2937', fontWeight: '800', letterSpacing: '-0.5px' }}>AV XPERTS</div>
+                  <div className="brand-subtitle" style={{ fontSize: '11px', color: '#94A3B8', fontWeight: '500', marginTop: '2px', textTransform: 'none', letterSpacing: '0' }}>Service Management System</div>
                 </div>
+              ) : (
+                <div className="brand-title" style={{ fontSize: '22px', color: '#1F2937', fontWeight: '800' }}>AV</div>
               )}
             </div>
           </div>
@@ -586,8 +587,7 @@ function App() {
               delete axios.defaults.headers.common['Authorization'];
               setIsLoggedIn(false);
             }}>
-              <LogOut size={17} />
-              <span>Sign Out</span>
+              <span style={{ padding: '0 4px', fontSize: '13px' }}>Sign Out</span>
             </button>
           </div>
         </div>

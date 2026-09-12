@@ -18,6 +18,7 @@ export default function WorkflowTab({
   const [filterYear, setFilterYear] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [isAdvancingId, setIsAdvancingId] = useState(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
@@ -28,10 +29,10 @@ export default function WorkflowTab({
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.rma.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (item.serialNumber && item.serialNumber.toLowerCase().includes(searchQuery.toLowerCase()));
-      
+
     let matchesMonth = true;
     let matchesYear = true;
-    
+
     if (item.date) {
       let month = '';
       let year = '';
@@ -102,7 +103,7 @@ export default function WorkflowTab({
     try {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
       const results = await Promise.allSettled(selectedTickets.map(id => axios.delete(`${baseUrl}/tickets/${id}`)));
-      
+
       const failed = results.filter(r => r.status === 'rejected');
       if (failed.length > 0) {
         console.error('Some tickets failed to delete:', failed);
@@ -129,31 +130,23 @@ export default function WorkflowTab({
   }).filter(Boolean)));
 
   const STAT_CONFIG = [
-    { label: 'Customer Inward', key: 'CUSTOMER INWARD', icon: ClipboardList, iconBg: '#f3f4f6', iconColor: '#000000', indicatorColor: '#ccff00' },
-    { label: 'Sent to Vendor', key: 'VENDOR OUTWARD', icon: Truck, iconBg: '#f3f4f6', iconColor: '#000000', indicatorColor: '#a09bf4' },
-    { label: 'At Vendor', key: 'VENDOR INWARD', icon: Package, iconBg: '#f3f4f6', iconColor: '#000000', indicatorColor: '#1f1f1f' },
-    { label: 'Ready for Customer', key: 'CUSTOMER OUTWARD', icon: UserCheck, iconBg: '#f3f4f6', iconColor: '#000000', indicatorColor: '#ccff00' },
+    { label: 'Customer Inward', key: 'CUSTOMER INWARD', indicatorColor: '#FDE047' },
+    { label: 'Sent to Vendor', key: 'VENDOR OUTWARD', indicatorColor: '#F1F5F9' },
+    { label: 'At Vendor', key: 'VENDOR INWARD', indicatorColor: '#93C5FD' },
+    { label: 'Ready for Customer', key: 'CUSTOMER OUTWARD', indicatorColor: '#86EFAC' },
   ];
 
   return (
     <>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        {STAT_CONFIG.map(({ label, key, icon: Icon, iconBg, iconColor, indicatorColor }) => {
+      <div className="workflow-stats-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        {STAT_CONFIG.map(({ label, key, indicatorColor }) => {
           const count = recentActivities.filter(a => a.status === key).length;
+          const displayCount = count < 10 ? `0${count}` : count;
           return (
-            <div key={key} style={{ padding: '16px 16px', background: '#fff', borderRadius: 'var(--radius-lg)', boxShadow: '0 4px 24px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon size={14} color={iconColor} />
-                </div>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#000' }}>{label}</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
-                <div style={{ fontSize: '32px', fontWeight: '800', color: '#000', lineHeight: 1, letterSpacing: '-1px' }}>{count}</div>
-              </div>
-              <div style={{ height: '6px', width: '100%', backgroundColor: '#f3f4f6', borderRadius: '4px', overflow: 'hidden', marginTop: 'auto' }}>
-                <div style={{ height: '100%', width: count === 0 ? '0%' : '60%', backgroundColor: indicatorColor, borderRadius: '4px' }} />
-              </div>
+            <div key={key} className="workflow-stat-card" style={{ padding: '20px 24px', background: '#fff', borderRadius: '12px', border: '1px solid var(--border-strong)', display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative', overflow: 'hidden' }}>
+              <div className="stat-label" style={{ fontSize: '10px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
+              <div className="stat-value" style={{ fontSize: '36px', fontWeight: '700', color: '#1F2937', lineHeight: 1, letterSpacing: '-1px', marginBottom: '8px' }}>{displayCount}</div>
+              <div style={{ position: 'absolute', bottom: 0, left: '24px', right: '24px', height: '4px', backgroundColor: indicatorColor, borderRadius: '4px 4px 0 0' }} />
             </div>
           );
         })}
@@ -166,230 +159,253 @@ export default function WorkflowTab({
           <p className="page-subtitle">Track and advance tickets through the RMA pipeline</p>
         </div>
 
-        <div className="workflow-controls">
-          {selectedTickets.length > 0 && (
-            <button
-              onClick={handleDeleteSelected}
-              disabled={isDeleting}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                background: '#ef4444', color: 'white', padding: '8px 16px',
-                borderRadius: '6px', border: 'none', cursor: isDeleting ? 'not-allowed' : 'pointer',
-                fontWeight: 500, fontSize: '14px', marginRight: '8px'
-              }}
-            >
-              {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-              Delete Selected
-            </button>
-          )}
-          <CustomDropdown
-            value={filterMonth}
-            onChange={setFilterMonth}
-            style={{ minWidth: 120 }}
-            options={[
-              { value: 'All', label: 'All Months' },
-              ...['01','02','03','04','05','06','07','08','09','10','11','12'].map(m => ({
-                value: m,
-                label: new Date(2000, parseInt(m) - 1, 1).toLocaleString('default', { month: 'short' })
-              }))
-            ]}
-          />
-
-          <CustomDropdown
-            value={filterYear}
-            onChange={setFilterYear}
-            style={{ minWidth: 100 }}
-            options={[
-              { value: 'All', label: 'All Years' },
-              ...uniqueYears.map(y => ({ value: String(y), label: String(y) }))
-            ]}
-          />
-
-          <CustomDropdown
-            value={workflowFilter}
-            onChange={setWorkflowFilter}
-            style={{ minWidth: 160 }}
-            options={['All Items', 'Customer Inward', 'Vendor Outward', 'Vendor Inward', 'Customer Outward', 'Completed'].map(tab => ({
-              value: tab, label: tab
-            }))}
-          />
-
-          <div className="search-box">
-            <Search size={15} color="var(--text-muted)" />
+        <div className="workflow-controls" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="search-box" style={{ border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', minWidth: '240px', height: '38px', borderRadius: '99px' }}>
+            <Search size={15} color="#94A3B8" />
             <input
               type="text"
               className="search-input"
-              placeholder="Search tickets..."
+              placeholder="Search all fields..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 0 }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', display: 'flex', padding: 0 }}
               >
                 ×
               </button>
             )}
           </div>
+
+          <div style={{ position: 'relative' }}>
+            <button 
+              onClick={() => setIsFilterOpen(!isFilterOpen)} 
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#E0E7FF', color: '#4F46E5', border: 'none', padding: '0 16px', height: '38px', borderRadius: '99px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+            >
+              <SlidersHorizontal size={14} />
+              Filter
+            </button>
+          </div>
         </div>
       </div>
+      
+      {/* Inline Filters Bar */}
+      {isFilterOpen && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', flexWrap: 'wrap', padding: '16px', background: '#F8F9FB', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+          <CustomDropdown
+            value={filterMonth}
+            onChange={setFilterMonth}
+            prefix="Date range"
+            options={[
+              { value: 'All', label: 'None' },
+              ...['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map(m => ({
+                value: m,
+                label: new Date(2000, parseInt(m) - 1, 1).toLocaleString('default', { month: 'short' })
+              }))
+            ]}
+          />
+          <CustomDropdown
+            value={workflowFilter}
+            onChange={setWorkflowFilter}
+            prefix="Item type"
+            options={['All Items', 'Customer Inward', 'Vendor Outward', 'Vendor Inward', 'Customer Outward', 'Completed'].map(tab => ({
+              value: tab, 
+              label: tab === 'All Items' ? 'All' : tab
+            }))}
+          />
+          <CustomDropdown
+            value={filterYear}
+            onChange={setFilterYear}
+            prefix="Year"
+            options={[
+              { value: 'All', label: 'All' },
+              ...uniqueYears.map(y => ({ 
+                value: String(y), 
+                label: String(y)
+              }))
+            ]}
+          />
+          {(filterMonth !== 'All' || filterYear !== 'All' || workflowFilter !== 'All Items' || searchQuery !== '') && (
+            <button 
+              onClick={() => {
+                setFilterMonth('All');
+                setFilterYear('All');
+                setWorkflowFilter('All Items');
+                setSearchQuery('');
+              }}
+              style={{ 
+                display: 'flex', alignItems: 'center', gap: '6px', 
+                background: '#FEE2E2', color: '#DC2626', 
+                border: 'none', padding: '8px 16px', 
+                borderRadius: '99px', fontSize: '13px', 
+                fontWeight: '600', cursor: 'pointer',
+                marginLeft: '4px'
+              }}
+            >
+              <span style={{ fontSize: '14px', fontWeight: 'bold' }}>×</span> Clear All Filters
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ── Table Container ── */}
       <div className="workflow-table-container" style={{ flexShrink: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div style={{ overflowX: 'auto', width: '100%' }}>
           <table className="workflow-table">
-          <thead>
-            <tr>
-              <th className="workflow-th" style={{ width: '40px', textAlign: 'center' }}>
-                <input
-                  type="checkbox"
-                  checked={selectedTickets.length > 0 && selectedTickets.length === paginatedGroups.length}
-                  onChange={handleSelectAll}
-                  style={{ cursor: 'pointer' }}
-                />
-              </th>
-              <th className="workflow-th">Ticket #</th>
-              <th className="workflow-th">Customer</th>
-              <th className="workflow-th">Product</th>
-              <th className="workflow-th">Serial</th>
-              <th className="workflow-th">Company Name</th>
-              <th className="workflow-th">Stage</th>
-              <th className="workflow-th" style={{ textAlign: 'center' }}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedGroups.length === 0 ? (
+            <thead>
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
-                  <Search size={28} style={{ marginBottom: 12, opacity: 0.3, display: 'block', margin: '0 auto 12px' }} />
-                  <div style={{ fontSize: 14 }}>No tickets match the current filters.</div>
-                </td>
-              </tr>
-            ) : (
-              paginatedGroups.map((group) => {
-                const { mainItem, services } = group;
-                const hasMultiple = services.length > 1;
-                return (
-                  <tr
-                    className="workflow-tr"
-                    key={mainItem.rma}
+                <th className="workflow-th" style={{ width: '40px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedTickets.length > 0 && selectedTickets.length === paginatedGroups.length}
+                    onChange={handleSelectAll}
                     style={{ cursor: 'pointer' }}
-                    onClick={() => setViewingItem(mainItem)}
-                  >
-                    <td className="workflow-td" style={{ textAlign: 'center' }}>
-                      <input
-                        type="checkbox"
-                        checked={selectedTickets.includes(mainItem.id)}
-                        onChange={() => handleSelectTicket(mainItem.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ cursor: 'pointer' }}
-                      />
-                    </td>
-                    <td className="workflow-td">
-                      <span className="ticket-id">{mainItem.rma}</span>
-                    </td>
-                    <td className="workflow-td">
-                      <span className="table-cell-main">{mainItem.name}</span>
-                      <span className="table-cell-sub">{mainItem.contactNumber}</span>
-                    </td>
-                    <td className="workflow-td">
-                      <span className="table-cell-main">
-                        {mainItem.product.length > 26 ? mainItem.product.substring(0, 26) + '…' : mainItem.product}
-                      </span>
-                      <span className="table-cell-sub">
-                        {mainItem.category}
-                      </span>
-                    </td>
-                    <td className="workflow-td">
-                      <span className="table-serial">{mainItem.serialNumber || '—'}</span>
-                    </td>
-                    <td className="workflow-td">
-                      <span className="table-cell-main" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{mainItem.serviceVendor}</span>
-                    </td>
-                    <td className="workflow-td">
-                      <span className={`status-badge ${mainItem.statusClass}`}>
-                        {mainItem.status}
-                      </span>
-                    </td>
-                    <td className="workflow-td" style={{ textAlign: 'center' }}>
-                      {hasMultiple ? (
-                        <button
-                          className="action-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setViewingItem(mainItem);
-                          }}
-                          title="View all services"
-                          style={{ background: 'var(--surface-hover)', color: 'var(--text-secondary)' }}
-                        >
-                          <Eye size={17} />
-                        </button>
-                      ) : (
-                        userRole === 'ADMIN' ? (
-                          mainItem.status !== 'CUSTOMER OUTWARD' && mainItem.status !== 'COMPLETED' ? (
-                            <button
-                              className="action-btn"
-                              disabled={isAdvancingId === mainItem.id}
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                setIsAdvancingId(mainItem.id);
-                                try {
-                                  await setAdvancingItem(mainItem);
-                                  setAdvanceDate(getTodayDate());
-                                  setNewSerialNumber('');
-                                  if (setDocketNumber) setDocketNumber('');
-                                  setCourierCharge('');
-                                } finally {
-                                  setIsAdvancingId(null);
-                                }
-                              }}
-                              title="Advance to next stage"
-                            >
-                              {isAdvancingId === mainItem.id ? <Loader2 size={17} className="animate-spin" /> : <ArrowRightCircle size={17} />}
-                            </button>
-                          ) : (
-                            <button
-                              className="action-btn"
-                              style={{
-                                color: generatingReportId === mainItem.id ? 'var(--text-muted)' : '#059669',
-                                background: generatingReportId === mainItem.id ? 'var(--surface-hover)' : 'var(--success-light)',
-                                cursor: generatingReportId === mainItem.id ? 'not-allowed' : 'pointer',
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (generatingReportId !== mainItem.id) {
-                                  handleGenerateReport(mainItem);
-                                }
-                              }}
-                              disabled={generatingReportId === mainItem.id}
-                              title={
-                                generatingReportId === mainItem.id
-                                  ? "Generating Report..."
-                                  : mainItem.status === 'COMPLETED'
-                                  ? "Download Final Report"
-                                  : "Complete & Send Final Report"
-                              }
-                            >
-                              {generatingReportId === mainItem.id
-                                ? <Loader2 size={17} className="spinner" />
-                                : mainItem.status === 'COMPLETED'
-                                ? <Printer size={17} />
-                                : <Share size={17} />
-                              }
-                            </button>
-                          )
+                  />
+                </th>
+                <th className="workflow-th">Ticket #</th>
+                <th className="workflow-th">Customer</th>
+                <th className="workflow-th">Product</th>
+                <th className="workflow-th">Serial</th>
+                <th className="workflow-th">Company Name</th>
+                <th className="workflow-th">Stage</th>
+                <th className="workflow-th" style={{ textAlign: 'center' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedGroups.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
+                    <Search size={28} style={{ marginBottom: 12, opacity: 0.3, display: 'block', margin: '0 auto 12px' }} />
+                    <div style={{ fontSize: 14 }}>No tickets match the current filters.</div>
+                  </td>
+                </tr>
+              ) : (
+                paginatedGroups.map((group) => {
+                  const { mainItem, services } = group;
+                  const hasMultiple = services.length > 1;
+                  return (
+                    <tr
+                      className="workflow-tr"
+                      key={mainItem.rma}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setViewingItem(mainItem)}
+                    >
+                      <td className="workflow-td" style={{ textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedTickets.includes(mainItem.id)}
+                          onChange={() => handleSelectTicket(mainItem.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      </td>
+                      <td className="workflow-td">
+                        <span className="ticket-id">{mainItem.rma}</span>
+                      </td>
+                      <td className="workflow-td">
+                        <span className="table-cell-main">{mainItem.name}</span>
+                        <span className="table-cell-sub">{mainItem.contactNumber}</span>
+                      </td>
+                      <td className="workflow-td">
+                        <span className="table-cell-main">
+                          {mainItem.product.length > 26 ? mainItem.product.substring(0, 26) + '…' : mainItem.product}
+                        </span>
+                        <span className="table-cell-sub">
+                          {mainItem.category}
+                        </span>
+                      </td>
+                      <td className="workflow-td">
+                        <span className="table-serial">{mainItem.serialNumber || '—'}</span>
+                      </td>
+                      <td className="workflow-td">
+                        <span className="table-cell-main" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{mainItem.serviceVendor}</span>
+                      </td>
+                      <td className="workflow-td">
+                        <span className={`status-badge ${mainItem.statusClass}`}>
+                          {mainItem.status}
+                        </span>
+                      </td>
+                      <td className="workflow-td" style={{ textAlign: 'center' }}>
+                        {hasMultiple ? (
+                          <button
+                            className="action-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingItem(mainItem);
+                            }}
+                            title="View all services"
+                            style={{ background: '#F1F5F9', color: '#64748B' }}
+                          >
+                            View all
+                          </button>
                         ) : (
-                          <span style={{ color: 'var(--text-muted)', fontSize: 18 }}>—</span>
-                        )
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                          userRole === 'ADMIN' ? (
+                            mainItem.status !== 'CUSTOMER OUTWARD' && mainItem.status !== 'COMPLETED' ? (
+                              <button
+                                className="action-btn"
+                                disabled={isAdvancingId === mainItem.id}
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  setIsAdvancingId(mainItem.id);
+                                  try {
+                                    await setAdvancingItem(mainItem);
+                                    setAdvanceDate(getTodayDate());
+                                    setNewSerialNumber('');
+                                    if (setDocketNumber) setDocketNumber('');
+                                    setCourierCharge('');
+                                  } finally {
+                                    setIsAdvancingId(null);
+                                  }
+                                }}
+                                title="Advance to next stage"
+                                style={{ background: '#E0E7FF', color: '#4F46E5' }}
+                              >
+                                {isAdvancingId === mainItem.id ? <Loader2 size={15} className="animate-spin" /> : 'Advance →'}
+                              </button>
+                            ) : (
+                              <button
+                                className="action-btn"
+                                style={{
+                                  color: generatingReportId === mainItem.id ? 'var(--text-muted)' : '#1F2937',
+                                  background: generatingReportId === mainItem.id ? 'var(--surface-hover)' : '#F1F5F9',
+                                  cursor: generatingReportId === mainItem.id ? 'not-allowed' : 'pointer',
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (generatingReportId !== mainItem.id) {
+                                    handleGenerateReport(mainItem);
+                                  }
+                                }}
+                                disabled={generatingReportId === mainItem.id}
+                                title={
+                                  generatingReportId === mainItem.id
+                                    ? "Generating Report..."
+                                    : mainItem.status === 'COMPLETED'
+                                      ? "Download Final Report"
+                                      : "Complete & Send Final Report"
+                                }
+                              >
+                                {generatingReportId === mainItem.id
+                                  ? <Loader2 size={15} className="spinner" />
+                                  : mainItem.status === 'COMPLETED'
+                                    ? 'Print'
+                                    : 'Complete'
+                                }
+                              </button>
+                            )
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: 18 }}>—</span>
+                          )
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
 
         {/* ── Pagination ── */}

@@ -139,6 +139,37 @@
     width: 100%;
   }
 
+  /* ── Workflow Stats Grid ── */
+  .workflow-stats-container {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+  }
+  
+  .workflow-stat-card {
+    padding: 12px !important;
+    gap: 8px !important;
+  }
+
+  .workflow-stat-card .stat-label {
+    font-size: 11px !important;
+    line-height: 1.2;
+    white-space: normal;
+  }
+
+  .workflow-stat-card .stat-value {
+    font-size: 24px !important;
+  }
+  
+  .workflow-stat-card .stat-icon-wrapper {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  .workflow-stat-card .stat-icon-wrapper svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
   /* ── Status Bar ── */
   .status-bar {
     flex-direction: column;
@@ -175,8 +206,16 @@
     gap: 8px;
   }
 
+  .workflow-controls > * {
+    width: 100% !important;
+  }
+
+  .workflow-controls button {
+    justify-content: center;
+  }
+
   .search-box { width: 100%; }
-  .filter-dropdown { width: 100%; }
+  .custom-dropdown { width: 100%; }
 
   .workflow-table-container { overflow-x: auto; }
 
@@ -195,12 +234,12 @@
   /* ── Modal ── */
   .modal-overlay {
     padding: 16px !important;
-    align-items: flex-end;
+    align-items: center;
   }
 
   .modal-content {
     max-height: 92dvh;
-    border-radius: 20px 20px 16px 16px;
+    border-radius: 16px;
   }
 
   /* ── Cards ── */

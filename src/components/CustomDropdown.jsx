@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 
-export default function CustomDropdown({ value, options, onChange, style, disabled, className }) {
+export default function CustomDropdown({ value, options, onChange, style, disabled, className, prefix }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -25,12 +25,22 @@ export default function CustomDropdown({ value, options, onChange, style, disabl
         style={{ 
           opacity: disabled ? 0.6 : 1, 
           cursor: disabled ? 'not-allowed' : 'pointer',
-          border: '1.5px solid var(--border)',
-          backgroundColor: 'var(--surface)'
+          border: '1px solid #E2E8F0',
+          backgroundColor: '#FFFFFF',
+          borderRadius: '99px',
+          padding: '8px 16px',
+          fontSize: '13px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          ...style
         }}
       >
-        <span>{selectedOption.label}</span>
-        <ChevronDown size={14} style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }} color="var(--text-secondary)" />
+        <span style={{ fontWeight: 600, color: '#1F2937', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {prefix && <span style={{ color: '#64748B', fontWeight: 500 }}>{prefix}</span>}
+          {selectedOption.label}
+        </span>
+        <ChevronDown size={14} style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: '0.2s', opacity: 0.5 }} color="#1F2937" />
       </div>
       {isOpen && !disabled && (
         <div className="custom-dropdown-menu">

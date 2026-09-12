@@ -3,17 +3,41 @@
    ═══════════════════════════════════════════════════════ */
 
 @keyframes float-bg {
-  0%, 100% { transform: scale(1) translateY(0px); }
-  50%       { transform: scale(1.04) translateY(-10px); }
+
+  0%,
+  100% {
+    transform: scale(1) translateY(0px);
+  }
+
+  50% {
+    transform: scale(1.04) translateY(-10px);
+  }
 }
+
 @keyframes login-fade-in {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 @keyframes shimmer-bg {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .login-container {
@@ -32,9 +56,9 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 20% 50%, rgba(0,0,0,0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(0,0,0,0.02) 0%, transparent 50%),
-    radial-gradient(ellipse at 60% 80%, rgba(0,0,0,0.02) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 50%, rgba(0, 0, 0, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(0, 0, 0, 0.02) 0%, transparent 50%),
+    radial-gradient(ellipse at 60% 80%, rgba(0, 0, 0, 0.02) 0%, transparent 50%),
     #F8FAFC;
   pointer-events: none;
 }
@@ -44,7 +68,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.05) 1px, transparent 0);
+  background-image: radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.05) 1px, transparent 0);
   background-size: 28px 28px;
 }
 
@@ -57,7 +81,7 @@
   width: 600px;
   height: 600px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,0,0,0.04) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.04) 0%, transparent 70%);
   animation: float-bg 8s ease-in-out infinite;
   pointer-events: none;
 }
@@ -70,7 +94,7 @@
   width: 500px;
   height: 500px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,0,0,0.03) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.03) 0%, transparent 70%);
   animation: float-bg 10s ease-in-out infinite reverse;
   pointer-events: none;
 }
@@ -80,18 +104,18 @@
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   padding: 40px 44px;
   border-radius: 24px;
   width: 100%;
   max-width: 440px;
-  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   gap: 28px;
   position: relative;
   z-index: 10;
-  animation: login-fade-in 0.4s cubic-bezier(.34,1.56,.64,1) both;
+  animation: login-fade-in 0.4s cubic-bezier(.34, 1.56, .64, 1) both;
 }
 
 /* ── Login Header ── */
@@ -161,11 +185,11 @@
 .login-input {
   width: 100%;
   padding: 13px 16px;
-  border: 1px solid rgba(0,0,0,0.1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 10px;
   font-size: 14.5px;
   color: #0F172A;
-  background-color: rgba(255,255,255,0.8);
+  background-color: rgba(255, 255, 255, 0.8);
   outline: none;
   transition: all 0.2s ease;
   font-family: 'Inter', sans-serif;
@@ -178,7 +202,7 @@
 .login-input:focus {
   border-color: #000000;
   background-color: #FFFFFF;
-  box-shadow: 0 0 0 3px rgba(0,0,0,0.1);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
 }
 
 .login-btn {
@@ -214,8 +238,8 @@
 
 /* Login error alert */
 .login-error {
-  background: rgba(239,68,68,0.1);
-  border: 1px solid rgba(239,68,68,0.2);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
   color: #DC2626;
   padding: 11px 14px;
   border-radius: 8px;
@@ -227,7 +251,7 @@
 .logout-btn-container {
   margin-top: auto;
   padding-top: 16px;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .logout-btn {
@@ -249,15 +273,21 @@
 }
 
 .logout-btn:hover {
-  background-color: rgba(239,68,68,0.1);
+  background-color: rgba(239, 68, 68, 0.1);
   color: #FC8181;
 }
 
 /* Spinner in login */
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
+
 .animate-spin {
   animation: spin 1s linear infinite;
 }
