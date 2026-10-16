@@ -73,13 +73,13 @@ export default function LedgersTab({ recentActivities, setViewingItem }) {
                 <div className="vendor-detail-row">
                   <span className="vendor-detail-label">To Vendor:</span>
                   <span className="vendor-detail-value">
-                    {item.status === 'CUSTOMER INWARD' ? '--' : item.date}
+                    {item.date}
                   </span>
                 </div>
                 <div className="vendor-detail-row">
                   <span className="vendor-detail-label">From Vendor:</span>
-                  <span className={`vendor-detail-value ${(item.status === 'CUSTOMER INWARD' || item.status === 'VENDOR OUTWARD') ? 'in-progress' : ''}`}>
-                    {(item.status === 'CUSTOMER INWARD' || item.status === 'VENDOR OUTWARD') ? 'In Progress' : item.date}
+                  <span className={`vendor-detail-value ${item.status === 'VENDOR OUTWARD' ? 'in-progress' : ''}`}>
+                    {item.status === 'VENDOR OUTWARD' ? 'In Progress' : item.date}
                   </span>
                 </div>
                 <div className="vendor-detail-row">

@@ -99,7 +99,7 @@ const SearchableDropdown = ({ options, value, onChange, placeholder, icon: Icon 
 
 /* ─────────── Workflow Steps (right panel) ─────────── */
 const WORKFLOW_STEPS = [
-  { label: 'Customer Inward', desc: 'Active Process', color: '#047857' },
+  { label: 'New Inward', desc: 'Active Process', color: '#047857' },
   { label: 'Vendor Dispatch', desc: 'Pending Entry', color: '#F59E0B' },
   { label: 'Resolution', desc: 'Awaiting Return', color: '#22C55E' },
 ];
@@ -304,7 +304,7 @@ export default function NewInwardModal({ setIsModalOpen, formData, setFormData, 
             </div>
             <div>
               <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
-                Customer Inward Form
+                New Inward Form
               </h2>
               <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 2 }}>
                 Initialize a new replacement ticket for returned merchandise.

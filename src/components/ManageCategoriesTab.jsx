@@ -107,7 +107,6 @@ export default function ManageCategoriesTab({ userRole }) {
           </p>
           <div style={{ display: 'flex', gap: 10 }}>
             <div style={{ position: 'relative', flex: 1 }}>
-              <Tag size={14} color="var(--text-muted)" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
               <input
                 type="text"
                 placeholder="e.g. Motherboard, GPU, RAM..."
@@ -115,7 +114,6 @@ export default function ManageCategoriesTab({ userRole }) {
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
                 className="form-input"
-                style={{ paddingLeft: 36 }}
               />
             </div>
             <button
@@ -171,14 +169,13 @@ export default function ManageCategoriesTab({ userRole }) {
             </span>
           </div>
           <div style={{ position: 'relative' }}>
-            <Search size={13} color="var(--text-muted)" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
             <input
               type="text"
               placeholder="Search..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               style={{
-                padding: '7px 12px 7px 30px', fontSize: 13,
+                padding: '7px 12px 7px 12px', fontSize: 13,
                 border: '1.5px solid var(--border)', borderRadius: 8,
                 outline: 'none', background: 'var(--surface)',
                 color: 'var(--text-primary)', width: 180,

@@ -20,6 +20,7 @@ export default function AdvanceWorkflowModal({
 }) {
   const [isDocketCameraOpen, setIsDocketCameraOpen] = useState(false);
   const [isProductCameraOpen, setIsProductCameraOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
   
   const { data: vendors = [] } = useVendors();
 
@@ -109,10 +110,6 @@ export default function AdvanceWorkflowModal({
                     <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Date</span>
                     <input type="date" className="form-input" style={{ padding: '6px', fontSize: '14px', border: '1px solid #e2e8f0', borderRadius: '4px', width: '100%' }} value={advanceDate} onChange={(e) => setAdvanceDate(e.target.value)} />
                   </div>
-                  <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Courier Charge</label>
-                    <input type="text" className="form-input" style={{ padding: '8px', fontSize: '14px', width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px' }} placeholder="e.g. ₹150" value={courierCharge} onChange={(e) => setCourierCharge(e.target.value)} />
-                  </div>
                 </div>
               </div>
 
@@ -149,7 +146,8 @@ export default function AdvanceWorkflowModal({
                           key={idx}
                           src={getFullUrl(imgUrl)} 
                           alt={`Inward ${idx + 1}`} 
-                          style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px', border: '1px solid #e2e8f0', objectFit: 'contain' }} 
+                          onClick={() => setPreviewImage(getFullUrl(imgUrl))}
+                          style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px', border: '1px solid #e2e8f0', objectFit: 'contain', cursor: 'zoom-in' }} 
                         />
                       ))}
                     </div>
@@ -157,71 +155,6 @@ export default function AdvanceWorkflowModal({
                 );
               })()}
 
-              <div className="form-group" style={{ marginBottom: '16px' }}>
-                <label className="form-label" style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Docket Number</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  style={{ padding: '8px', fontSize: '14px', width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px', marginBottom: '12px' }}
-                  placeholder="Enter docket number..."
-                  value={docketNumber}
-                  onChange={(e) => setDocketNumber(e.target.value)}
-                />
-                
-                <label className="form-label" style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Upload Docket Image</label>
-                {isDocketCameraOpen ? (
-                  <CameraCapture 
-                    onCapture={(file) => {
-                      const reader = new FileReader();
-                      reader.onload = (event) => setShippingImagePreview(event.target.result);
-                      reader.readAsDataURL(file);
-                      setIsDocketCameraOpen(false);
-                    }}
-                    onCancel={() => setIsDocketCameraOpen(false)}
-                  />
-                ) : (
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button type="button" onClick={() => setIsDocketCameraOpen(true)} style={{ flex: 1, padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center', cursor: 'pointer', backgroundColor: '#f8fafc', fontSize: '14px', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                      <Camera size={16} /> Camera
-                    </button>
-                    <label style={{ flex: 1, padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center', cursor: 'pointer', backgroundColor: '#f8fafc', fontSize: '14px', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                      <Upload size={16} /> Upload
-                      <input
-                        type="file"
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (event) => setShippingImagePreview(event.target.result);
-                            reader.readAsDataURL(file);
-                          } else {
-                            setShippingImagePreview(null);
-                          }
-                        }}
-                      />
-                    </label>
-                  </div>
-                )}
-              </div>
-
-              {shippingImagePreview && !isDocketCameraOpen && (
-                <div style={{ marginBottom: '16px' }}>
-                  <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Shipping Image Preview</span>
-                  <div style={{ position: 'relative', display: 'inline-block' }}>
-                    <img src={shippingImagePreview} alt="Shipping Preview" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
-                    <button 
-                      type="button"
-                      onClick={() => setShippingImagePreview(null)}
-                      style={{ position: 'absolute', top: '-8px', right: '-8px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: 'none' }}
-                      title="Remove image"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                </div>
-              )}
 
               <button
                 type="button"
@@ -255,10 +188,7 @@ export default function AdvanceWorkflowModal({
                   <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>New Serial Number</label>
                   <input type="text" className="form-input" style={{ padding: '8px', fontSize: '14px', width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px' }} placeholder="Enter replacement serial number..." value={newSerialNumber} onChange={(e) => setNewSerialNumber(e.target.value)} />
                 </div>
-                <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Courier Charge</label>
-                  <input type="text" className="form-input" style={{ padding: '8px', fontSize: '14px', width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px' }} placeholder="e.g. $15.00" value={courierCharge} onChange={(e) => setCourierCharge(e.target.value)} />
-                </div>
+
                 <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
                   <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Transition Date</label>
                   <input type="date" className="form-input" style={{ padding: '8px', fontSize: '14px', width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px' }} value={advanceDate} onChange={(e) => setAdvanceDate(e.target.value)} />
@@ -320,7 +250,12 @@ export default function AdvanceWorkflowModal({
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {vendorInwardImages.map((imgSrc, index) => (
                       <div key={index} style={{ position: 'relative', display: 'inline-block' }}>
-                        <img src={imgSrc} alt={`Preview ${index + 1}`} style={{ maxWidth: '100px', maxHeight: '100px', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                        <img 
+                          src={imgSrc} 
+                          alt={`Preview ${index + 1}`} 
+                          onClick={() => setPreviewImage(imgSrc)}
+                          style={{ maxWidth: '100px', maxHeight: '100px', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'zoom-in' }} 
+                        />
                         <button 
                           type="button"
                           onClick={() => setVendorInwardImages(prev => prev.filter((_, i) => i !== index))}
@@ -370,10 +305,6 @@ export default function AdvanceWorkflowModal({
                   <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Transition Date</span>
                   <input type="date" className="form-input" style={{ padding: '6px', fontSize: '14px', border: '1px solid #e2e8f0', borderRadius: '4px', width: '100%' }} value={advanceDate} onChange={(e) => setAdvanceDate(e.target.value)} />
                 </div>
-                <div className="detail-item" style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Courier Charge</label>
-                  <input type="text" className="form-input" style={{ padding: '8px', fontSize: '14px', width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px' }} placeholder="e.g. ₹150" value={courierCharge} onChange={(e) => setCourierCharge(e.target.value)} />
-                </div>
               </div>
               <button
                 type="button"
@@ -391,6 +322,20 @@ export default function AdvanceWorkflowModal({
           <button className="btn-confirm" onClick={confirmAdvanceStatus}>Confirm Transition</button>
         </div>
       </div>
+
+      {/* Image Preview Lightbox */}
+      {previewImage && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+          <button 
+            onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
+            style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}
+            title="Close"
+          >
+            <X size={32} />
+          </button>
+          <img src={previewImage} alt="Preview" style={{ maxWidth: '90%', maxHeight: '85vh', borderRadius: '8px', objectFit: 'contain' }} />
+        </div>
+      )}
     </div>
   );
 }

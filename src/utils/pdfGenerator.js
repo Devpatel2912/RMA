@@ -277,13 +277,6 @@ export const generateTicketPDF = async (stageName, ticket) => {
   y += 5;
   ln(margin, y, margin + cW, y);
 
-  // Footer Signature
-  const footerY = yStart + 700;
-  font('bold', 10);
-  doc.text('For, AVXPERTS', margin + cW - 5, footerY, { align: 'right' });
-  font('normal', 10);
-  doc.text('(Authorised Signatory)', margin + cW - 5, footerY + 40, { align: 'right' });
-
 
 
 

@@ -6,7 +6,6 @@ import CustomDropdown from './CustomDropdown';
 const LOCAL_FORMATS_KEY = 'rma-local-whatsapp-formats';
 
 const stageOptions = [
-  'Customer Inward',
   'Vendor Outward',
   'Vendor Inward',
   'Customer Outward',

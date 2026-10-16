@@ -199,7 +199,7 @@ function App() {
           email: formData.email,
           product: formData.productName,
           serialNumber: formData.serialNumber,
-          status: "CUSTOMER INWARD",
+          status: "VENDOR OUTWARD",
           date: dateStr,
           description: formData.description,
           category: formData.category,
@@ -290,10 +290,6 @@ function App() {
   const confirmAdvanceStatus = async () => {
     if (!advancingItem) return;
 
-    if (!courierCharge || String(courierCharge).trim() === '') {
-      alert("Courier Charge is compulsory to advance to the next stage.");
-      return;
-    }
 
     let newStatus, newClass;
     switch (advancingItem.status) {

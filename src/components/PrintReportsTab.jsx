@@ -1,18 +1,9 @@
 import { useState } from 'react';
-import { Printer, Search, CheckCircle2, Package, Truck, UserCheck, FileText, Loader2 } from 'lucide-react';
+import { Printer, Search, CheckCircle2, Package, Truck, FileText, Loader2 } from 'lucide-react';
 import { generateTicketPDF } from '../utils/pdfGenerator';
 import axios from 'axios';
 
 const STAGE_CONFIG = [
-  {
-    key: 'hasCustomerInward',
-    title: 'Customer Inward',
-    icon: UserCheck,
-    stageName: 'CUSTOMER INWARD',
-    summary: 'Initial receipt from the customer. Includes product condition and customer details.',
-    accentColor: '#10b981',
-    accentBg: 'rgba(16,185,129,0.08)',
-  },
   {
     key: 'hasVendorOutward',
     title: 'Vendor Outward',
@@ -107,7 +98,7 @@ export default function PrintReportsTab({ recentActivities }) {
 
   const getStageStatus = (ticket) => {
     if (!ticket) return {};
-    const statuses = ['CUSTOMER INWARD', 'VENDOR OUTWARD', 'VENDOR INWARD', 'CUSTOMER OUTWARD', 'COMPLETED'];
+    const statuses = ['VENDOR OUTWARD', 'VENDOR INWARD', 'CUSTOMER OUTWARD', 'COMPLETED'];
     const currentIndex = statuses.indexOf(ticket.status);
     return {
       hasCustomerInward: currentIndex >= 0,

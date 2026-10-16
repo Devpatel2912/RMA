@@ -5,15 +5,6 @@ import { SkeletonLoader } from './Spinner';
 
 const STAT_CONFIG = [
   {
-    label: 'Customer Inward',
-    key: 'CUSTOMER INWARD',
-    icon: ClipboardList,
-    iconBg: 'rgba(4,120,87,0.12)',
-    iconColor: '#047857',
-    indicatorColor: '#047857',
-    statusClass: 'bg-blue-light',
-  },
-  {
     label: 'Sent to Vendor',
     key: 'VENDOR OUTWARD',
     icon: Truck,

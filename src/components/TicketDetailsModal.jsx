@@ -667,10 +667,9 @@ export default function TicketDetailsModal({
                     {userRole === 'ADMIN' ? (
                       <>
                         {(() => {
-                          const stagesOrder = ['CUSTOMER INWARD', 'VENDOR OUTWARD', 'VENDOR INWARD', 'CUSTOMER OUTWARD', 'COMPLETED'];
+                          const stagesOrder = ['VENDOR OUTWARD', 'VENDOR INWARD', 'CUSTOMER OUTWARD', 'COMPLETED'];
                           const currentStageIndex = stagesOrder.indexOf(service.status);
                           
-                          const isCustInwardEnabled = currentStageIndex >= stagesOrder.indexOf('CUSTOMER INWARD');
                           const isVendOutwardEnabled = currentStageIndex >= stagesOrder.indexOf('VENDOR OUTWARD');
                           const isVendInwardEnabled = currentStageIndex >= stagesOrder.indexOf('VENDOR INWARD');
                           const isCustOutwardEnabled = currentStageIndex >= stagesOrder.indexOf('CUSTOMER OUTWARD');
@@ -678,18 +677,6 @@ export default function TicketDetailsModal({
                           return (
                             <>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                                <button
-                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isCustInwardEnabled ? '#eff6ff' : '#f1f5f9', color: isCustInwardEnabled ? '#2563eb' : '#94a3b8', border: `1px solid ${isCustInwardEnabled ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isCustInwardEnabled ? 'pointer' : 'not-allowed', opacity: isCustInwardEnabled ? 1 : 0.6 }}
-                                  disabled={!isCustInwardEnabled}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openWhatsAppFormat('CUSTOMER INWARD');
-                                  }}
-                                  title={isCustInwardEnabled ? "Send WhatsApp Message for Customer Inward" : "Customer Inward"}
-                                >
-                                  {isCustInwardEnabled ? <MessageCircle size={16} /> : null} Customer Inward
-                                </button>
-                                
                                 <button
                                   style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isVendOutwardEnabled ? '#fffbeb' : '#f1f5f9', color: isVendOutwardEnabled ? '#d97706' : '#94a3b8', border: `1px solid ${isVendOutwardEnabled ? '#fde68a' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isVendOutwardEnabled ? 'pointer' : 'not-allowed', opacity: isVendOutwardEnabled ? 1 : 0.6 }}
                                   disabled={!isVendOutwardEnabled}
@@ -769,17 +756,6 @@ export default function TicketDetailsModal({
                                 </button>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                                <button
-                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isCustInwardEnabled ? '#eff6ff' : '#f1f5f9', color: isCustInwardEnabled ? '#2563eb' : '#94a3b8', border: `1px solid ${isCustInwardEnabled ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isCustInwardEnabled ? (printingStage === 'CUSTOMER INWARD' ? 'wait' : 'pointer') : 'not-allowed', opacity: isCustInwardEnabled ? 1 : 0.6 }}
-                                  disabled={!isCustInwardEnabled || printingStage === 'CUSTOMER INWARD'}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handlePrint('CUSTOMER INWARD');
-                                  }}
-                                >
-                                  <Printer size={16} /> Print Customer Inward
-                                </button>
-                                
                                 <button
                                   style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: isVendOutwardEnabled ? '#fffbeb' : '#f1f5f9', color: isVendOutwardEnabled ? '#d97706' : '#94a3b8', border: `1px solid ${isVendOutwardEnabled ? '#fde68a' : '#e2e8f0'}`, borderRadius: '6px', padding: '6px 12px', fontWeight: 500, fontSize: '13px', cursor: isVendOutwardEnabled ? (printingStage === 'VENDOR OUTWARD' ? 'wait' : 'pointer') : 'not-allowed', opacity: isVendOutwardEnabled ? 1 : 0.6 }}
                                   disabled={!isVendOutwardEnabled || printingStage === 'VENDOR OUTWARD'}

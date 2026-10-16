@@ -118,6 +118,100 @@ export default function WorkflowTab({
     }
   };
 
+  const handleNativeShare = async (ticket) => {
+    if (navigator.share) {
+      try {
+        let filesArray = [];
+        
+        if (ticket.outwardImageURL) {
+          let images = [];
+          try {
+            images = JSON.parse(ticket.outwardImageURL);
+            if (!Array.isArray(images)) images = [ticket.outwardImageURL];
+          } catch (e) {
+            images = [ticket.outwardImageURL];
+          }
+          
+          if (images.length > 0) {
+            const compressImageTo200KB = async (dataUrl, index) => {
+              return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                
+                const isBase64 = dataUrl.startsWith('data:');
+                if (!isBase64 && !dataUrl.startsWith('http')) {
+                  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api';
+                  const rootUrl = baseUrl.replace(/\/api$/, '');
+                  const normalizedPath = dataUrl.replace(/\\/g, '/');
+                  dataUrl = `${rootUrl}/${normalizedPath.startsWith('/') ? normalizedPath.slice(1) : normalizedPath}`;
+                }
+                
+                img.onload = () => {
+                  const canvas = document.createElement('canvas');
+                  let width = img.width;
+                  let height = img.height;
+
+                  const MAX_WIDTH = 1200;
+                  const MAX_HEIGHT = 1200;
+                  if (width > height && width > MAX_WIDTH) {
+                    height = Math.round(height * MAX_WIDTH / width);
+                    width = MAX_WIDTH;
+                  } else if (height > MAX_HEIGHT) {
+                    width = Math.round(width * MAX_HEIGHT / height);
+                    height = MAX_HEIGHT;
+                  }
+
+                  canvas.width = width;
+                  canvas.height = height;
+                  const ctx = canvas.getContext('2d');
+                  ctx.drawImage(img, 0, 0, width, height);
+
+                  let quality = 0.9;
+                  const targetSize = 200 * 1024; // 200KB
+
+                  const compress = () => {
+                    canvas.toBlob((blob) => {
+                      if (!blob) return reject(new Error("Compression failed"));
+                      if (blob.size <= targetSize || quality <= 0.1) {
+                        const file = new File([blob], `docket-${ticket.rma || 'img'}-${index}.jpg`, { type: 'image/jpeg' });
+                        resolve(file);
+                      } else {
+                        quality -= 0.1;
+                        compress();
+                      }
+                    }, 'image/jpeg', quality);
+                  };
+                  compress();
+                };
+                img.onerror = (err) => reject(err);
+                img.src = dataUrl;
+              });
+            };
+
+            const filePromises = images.map((url, idx) => compressImageTo200KB(url, idx));
+            const compressedFiles = await Promise.allSettled(filePromises);
+            filesArray = compressedFiles.filter(res => res.status === 'fulfilled').map(res => res.value);
+          }
+        }
+
+        const shareData = {
+          title: `Ticket ${ticket.rma}`,
+          text: `Ticket Details:\nRMA: ${ticket.rma}\nStatus: ${ticket.status}\nCustomer: ${ticket.name}\nProduct: ${ticket.product}\nVendor: ${ticket.serviceVendor || 'Unassigned'}\nSerial: ${ticket.serialNumber || 'N/A'}\nCourier Charge: ${ticket.courierCharge || 'N/A'}\nDocket Number: ${ticket.docketNumber || 'N/A'}`
+        };
+
+        if (filesArray.length > 0 && navigator.canShare && navigator.canShare({ files: filesArray })) {
+          shareData.files = filesArray;
+        }
+
+        await navigator.share(shareData);
+      } catch (err) {
+        console.log('Share error:', err);
+      }
+    } else {
+      alert("Sharing is not supported on this device/browser.");
+    }
+  };
+
   if (isLoading) {
     return <SkeletonLoader rows={7} />;
   }
@@ -130,7 +224,6 @@ export default function WorkflowTab({
   }).filter(Boolean)));
 
   const STAT_CONFIG = [
-    { label: 'Customer Inward', key: 'CUSTOMER INWARD', indicatorColor: '#FDE047' },
     { label: 'Sent to Vendor', key: 'VENDOR OUTWARD', indicatorColor: '#F1F5F9' },
     { label: 'At Vendor', key: 'VENDOR INWARD', indicatorColor: '#93C5FD' },
     { label: 'Ready for Customer', key: 'CUSTOMER OUTWARD', indicatorColor: '#86EFAC' },
@@ -210,7 +303,7 @@ export default function WorkflowTab({
             value={workflowFilter}
             onChange={setWorkflowFilter}
             prefix="Item type"
-            options={['All Items', 'Customer Inward', 'Vendor Outward', 'Vendor Inward', 'Customer Outward', 'Completed'].map(tab => ({
+            options={['All Items', 'Vendor Outward', 'Vendor Inward', 'Customer Outward', 'Completed'].map(tab => ({
               value: tab, 
               label: tab === 'All Items' ? 'All' : tab
             }))}
@@ -328,77 +421,90 @@ export default function WorkflowTab({
                         </span>
                       </td>
                       <td className="workflow-td" style={{ textAlign: 'center' }}>
-                        {hasMultiple ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                          {hasMultiple ? (
+                            <button
+                              className="action-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setViewingItem(mainItem);
+                              }}
+                              title="View all services"
+                              style={{ background: '#F1F5F9', color: '#64748B' }}
+                            >
+                              View all
+                            </button>
+                          ) : (
+                            userRole === 'ADMIN' ? (
+                              mainItem.status !== 'CUSTOMER OUTWARD' && mainItem.status !== 'COMPLETED' ? (
+                                <button
+                                  className="action-btn"
+                                  disabled={isAdvancingId === mainItem.id}
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    setIsAdvancingId(mainItem.id);
+                                    try {
+                                      await setAdvancingItem(mainItem);
+                                      setAdvanceDate(getTodayDate());
+                                      setNewSerialNumber('');
+                                      if (setDocketNumber) setDocketNumber('');
+                                      setCourierCharge('');
+                                    } finally {
+                                      setIsAdvancingId(null);
+                                    }
+                                  }}
+                                  title="Advance to next stage"
+                                  style={{ background: '#E0E7FF', color: '#4F46E5' }}
+                                >
+                                  {isAdvancingId === mainItem.id ? <Loader2 size={15} className="animate-spin" /> : 'Advance →'}
+                                </button>
+                              ) : (
+                                <button
+                                  className="action-btn"
+                                  style={{
+                                    color: generatingReportId === mainItem.id ? 'var(--text-muted)' : '#1F2937',
+                                    background: generatingReportId === mainItem.id ? 'var(--surface-hover)' : '#F1F5F9',
+                                    cursor: generatingReportId === mainItem.id ? 'not-allowed' : 'pointer',
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (generatingReportId !== mainItem.id) {
+                                      handleGenerateReport(mainItem);
+                                    }
+                                  }}
+                                  disabled={generatingReportId === mainItem.id}
+                                  title={
+                                    generatingReportId === mainItem.id
+                                      ? "Generating Report..."
+                                      : mainItem.status === 'COMPLETED'
+                                        ? "Download Final Report"
+                                        : "Complete & Send Final Report"
+                                  }
+                                >
+                                  {generatingReportId === mainItem.id
+                                    ? <Loader2 size={15} className="spinner" />
+                                    : mainItem.status === 'COMPLETED'
+                                      ? 'Print'
+                                      : 'Complete'
+                                  }
+                                </button>
+                              )
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontSize: 18 }}>—</span>
+                            )
+                          )}
                           <button
                             className="action-btn"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setViewingItem(mainItem);
+                              handleNativeShare(mainItem);
                             }}
-                            title="View all services"
-                            style={{ background: '#F1F5F9', color: '#64748B' }}
+                            title="Share Ticket"
+                            style={{ background: '#F3F4F6', color: '#4B5563', padding: '6px', minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           >
-                            View all
+                            <Share size={15} />
                           </button>
-                        ) : (
-                          userRole === 'ADMIN' ? (
-                            mainItem.status !== 'CUSTOMER OUTWARD' && mainItem.status !== 'COMPLETED' ? (
-                              <button
-                                className="action-btn"
-                                disabled={isAdvancingId === mainItem.id}
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  setIsAdvancingId(mainItem.id);
-                                  try {
-                                    await setAdvancingItem(mainItem);
-                                    setAdvanceDate(getTodayDate());
-                                    setNewSerialNumber('');
-                                    if (setDocketNumber) setDocketNumber('');
-                                    setCourierCharge('');
-                                  } finally {
-                                    setIsAdvancingId(null);
-                                  }
-                                }}
-                                title="Advance to next stage"
-                                style={{ background: '#E0E7FF', color: '#4F46E5' }}
-                              >
-                                {isAdvancingId === mainItem.id ? <Loader2 size={15} className="animate-spin" /> : 'Advance →'}
-                              </button>
-                            ) : (
-                              <button
-                                className="action-btn"
-                                style={{
-                                  color: generatingReportId === mainItem.id ? 'var(--text-muted)' : '#1F2937',
-                                  background: generatingReportId === mainItem.id ? 'var(--surface-hover)' : '#F1F5F9',
-                                  cursor: generatingReportId === mainItem.id ? 'not-allowed' : 'pointer',
-                                }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (generatingReportId !== mainItem.id) {
-                                    handleGenerateReport(mainItem);
-                                  }
-                                }}
-                                disabled={generatingReportId === mainItem.id}
-                                title={
-                                  generatingReportId === mainItem.id
-                                    ? "Generating Report..."
-                                    : mainItem.status === 'COMPLETED'
-                                      ? "Download Final Report"
-                                      : "Complete & Send Final Report"
-                                }
-                              >
-                                {generatingReportId === mainItem.id
-                                  ? <Loader2 size={15} className="spinner" />
-                                  : mainItem.status === 'COMPLETED'
-                                    ? 'Print'
-                                    : 'Complete'
-                                }
-                              </button>
-                            )
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)', fontSize: 18 }}>—</span>
-                          )
-                        )}
+                        </div>
                       </td>
                     </tr>
                   );
